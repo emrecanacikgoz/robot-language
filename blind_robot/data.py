@@ -14,34 +14,31 @@ class CalvinDataset(Dataset):
     
     def _load_data(self):
         
-        print("Getting Episodes...")
-        episodes = [f for f in tqdm(os.listdir(self.root)) if f.endswith(".npz")]
-        print("Getting Episode Paths...")
-        episode_paths = [os.path.join(self.root, episode) for episode in tqdm(episodes[:self.threshold])]
-        print("Getting Actions...")
-        actions = [np.load(episode_path)["actions"] for episode_path in tqdm(episode_paths)]
-        print("Getting Relative Actions...")
-        relative_actions = [np.load(episode_path)["rel_actions"] for episode_path in tqdm(episode_paths)]
-        print("Getting Robot States...")
-        robot_states = [np.load(episode_path)["robot_obs"] for episode_path in tqdm(episode_paths)]
+        annotations = np.load(f"{self.root}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
+        annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"]))
 
-        assert len(episode_paths) == len(actions) == len(relative_actions) == len(robot_states), "Lengths of episode_paths-actions-relative_actions-robot_states should be same!"
 
         self.items = list()
-        for action, relative_action, robot_state in zip(actions, relative_actions, robot_states):
-            self.items.append({
-                'action_xyz': action[:3],
-                'action_ExEyEz': action[3:6],
-                'action_gripper_oc': action[6],
-                'relative_action_xyz': relative_action[:3],
-                'relative_action_ExEyEz': relative_action[3:6],
-                'relative_action_gripper_oc': relative_action[6],
-                'robot_state_xyz': robot_state[:3],
-                'robot_state_ExEyEz': robot_state[3:6],
-                'robot_state_gripper_width': robot_state[6],
-                'robot_state_arm_joints': robot_state[7:14],
-                'robot_state_gripper_oc': robot_state[14],
-            })
+        for annotation in tqdm(annotations):
+            indices = list(range(annotation[0][0], annotation[0][1] + 1))
+            episode = list()
+            for idx, _ in enumerate(indices):
+                state = np.load(f"{self.root}/episode_{indices[idx]:07d}.npz", allow_pickle=True)
+                episode.append({
+                'action_xyz': state['actions'][:3],
+                'action_ExEyEz': state['actions'][3:6],
+                'action_gripper_oc': state['actions'][6],
+                'relative_action_xyz': state['rel_actions'][:3],
+                'relative_action_ExEyEz': state['rel_actions'][3:6],
+                'relative_action_gripper_oc': state['rel_actions'][6],
+                'robot_state_xyz': state['robot_obs'][:3],
+                'robot_state_ExEyEz': state['robot_obs'][3:6],
+                'robot_state_gripper_width': state['robot_obs'][6],
+                'robot_state_arm_joints': state['robot_obs'][7:14],
+                'robot_state_gripper_oc': state['robot_obs'][14],
+                'language_annotation': annotation[1]
+                })
+            self.items.append(episode)
 
     def __len__(self):
         return len(self.items)
@@ -80,6 +77,7 @@ class CalvinDataModule(pl.LightningDataModule):
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=calvin_collate_fn(),
         )
 
     def val_dataloader(self):
@@ -89,6 +87,7 @@ class CalvinDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=calvin_collate_fn(),
         )
 
     def predict_dataloader(self):
@@ -98,8 +97,38 @@ class CalvinDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
+            collate_fn=calvin_collate_fn(),
         )
 
 
+def calvin_collate_fn(pad_token_id=0):
+    def _collate_fn(batch):
+        _helper = lambda key: [j[key] for i in batch for j in i]
+        B = len(batch)
+        T = max([len(x) for x in batch])
+        input_ids = torch.empty((B, T), dtype=torch.long)
+        input_ids.fill_(pad_token_id)
+        attention_mask = torch.empty((B, T), dtype=torch.long)
+        attention_mask.fill_(0)
+        breakpoint()
+        for i, item in enumerate(batch):
+            L = item['prompt_ids'].numel()
+            input_ids[i, :L] = item['prompt_ids']
+            attention_mask[i, :L] = item['prompt_mask']
+        
+        pixel_values = torch.cat(_helper('pixel_values'), dim=0)
+        labels = torch.tensor(_helper('label')).view(1, -1)
 
+        return {
+            'pixel_values': pixel_values,
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'labels': labels,
+            'indexes': _helper('index'),
+            'raw_words': _helper('raw_word'),
+            'raw_contexts': _helper('raw_context'),
+            'image_files': _helper('image_files'),
+        }
+
+    return _collate_fn
 
