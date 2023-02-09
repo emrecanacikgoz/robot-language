@@ -1,9 +1,11 @@
-import os
+import os, hydra
+from omegaconf import DictConfig, ListConfig, OmegaConf
 import numpy as np
 from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
+
 
 class CalvinDataset(Dataset):
     def __init__(self, root, **kwargs):
@@ -17,8 +19,8 @@ class CalvinDataset(Dataset):
         annotations = np.load(f"{self.root}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
         annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"]))
 
-
         self.items = list()
+        episode_lens = []
         for annotation in tqdm(annotations):
             indices = list(range(annotation[0][0], annotation[0][1] + 1))
             episode = list()
@@ -39,12 +41,38 @@ class CalvinDataset(Dataset):
                 'language_annotation': annotation[1]
                 })
             self.items.append(episode)
+            episode_lens.append(len(episode))
+        self.max_episode_len = max(episode_lens)
 
     def __len__(self):
         return len(self.items)
     
     def __getitem__(self, index):
-        return self.items[index]
+        
+        episode = self.items[index]
+
+
+        source = [np.concatenate((state['action_xyz'], 
+                                 state['action_ExEyEz'], 
+                                 state['action_gripper_oc'], 
+                                 state['robot_state_xyz'], 
+                                 state['robot_state_ExEyEz'], 
+                                 state['robot_state_gripper_width'],
+                                 state['robot_state_arm_joints'], 
+                                 state['robot_state_gripper_oc'], 
+                                ), axis=None) 
+                                for state in episode]
+        source = self._check_padding(source)                 
+        return source
+    
+    def _check_padding(self, source):
+        pad = abs(source[0]*0)
+        if len(source) < self.max_episode_len:
+            pads = [pad for _ in range(self.max_episode_len-len(source))]
+            source = source + pads
+            return torch.tensor(source)
+        else:
+            return torch.tensor(source)
 
 
 class CalvinDataModule(pl.LightningDataModule):
@@ -77,7 +105,6 @@ class CalvinDataModule(pl.LightningDataModule):
             shuffle=True,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            collate_fn=calvin_collate_fn(),
         )
 
     def val_dataloader(self):
@@ -87,7 +114,6 @@ class CalvinDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            collate_fn=calvin_collate_fn(),
         )
 
     def predict_dataloader(self):
@@ -97,38 +123,7 @@ class CalvinDataModule(pl.LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
-            collate_fn=calvin_collate_fn(),
         )
 
 
-def calvin_collate_fn(pad_token_id=0):
-    def _collate_fn(batch):
-        _helper = lambda key: [j[key] for i in batch for j in i]
-        B = len(batch)
-        T = max([len(x) for x in batch])
-        input_ids = torch.empty((B, T), dtype=torch.long)
-        input_ids.fill_(pad_token_id)
-        attention_mask = torch.empty((B, T), dtype=torch.long)
-        attention_mask.fill_(0)
-        breakpoint()
-        for i, item in enumerate(batch):
-            L = item['prompt_ids'].numel()
-            input_ids[i, :L] = item['prompt_ids']
-            attention_mask[i, :L] = item['prompt_mask']
-        
-        pixel_values = torch.cat(_helper('pixel_values'), dim=0)
-        labels = torch.tensor(_helper('label')).view(1, -1)
-
-        return {
-            'pixel_values': pixel_values,
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'labels': labels,
-            'indexes': _helper('index'),
-            'raw_words': _helper('raw_word'),
-            'raw_contexts': _helper('raw_context'),
-            'image_files': _helper('image_files'),
-        }
-
-    return _collate_fn
 
