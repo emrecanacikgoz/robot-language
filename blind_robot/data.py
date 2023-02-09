@@ -1,5 +1,3 @@
-import os, hydra
-from omegaconf import DictConfig, ListConfig, OmegaConf
 import numpy as np
 from tqdm import tqdm
 import torch
@@ -8,67 +6,59 @@ import pytorch_lightning as pl
 
 
 class CalvinDataset(Dataset):
-    def __init__(self, root, **kwargs):
+    def __init__(
+        self, 
+        root_data_dir, 
+        keys=["actions", "rel_actions", "robot_obs"]
+        ):
         super().__init__()
-        self.root = root
-        self.threshold = kwargs["threshold"] # DEBUG
+        
+        self.root_data_dir = root_data_dir
+        self.keys=keys
         self._load_data()
     
     def _load_data(self):
-        
-        annotations = np.load(f"{self.root}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
+        annotations = np.load(f"{self.root_data_dir}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
         annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"]))
 
         self.items = list()
-        episode_lens = []
+        self.max_episode_len = -1
         for annotation in tqdm(annotations):
             indices = list(range(annotation[0][0], annotation[0][1] + 1))
             episode = list()
             for idx, _ in enumerate(indices):
-                state = np.load(f"{self.root}/episode_{indices[idx]:07d}.npz", allow_pickle=True)
-                episode.append({
-                'action_xyz': state['actions'][:3],
-                'action_ExEyEz': state['actions'][3:6],
-                'action_gripper_oc': state['actions'][6],
-                'relative_action_xyz': state['rel_actions'][:3],
-                'relative_action_ExEyEz': state['rel_actions'][3:6],
-                'relative_action_gripper_oc': state['rel_actions'][6],
-                'robot_state_xyz': state['robot_obs'][:3],
-                'robot_state_ExEyEz': state['robot_obs'][3:6],
-                'robot_state_gripper_width': state['robot_obs'][6],
-                'robot_state_arm_joints': state['robot_obs'][7:14],
-                'robot_state_gripper_oc': state['robot_obs'][14],
-                'language_annotation': annotation[1]
-                })
+                state = np.load(f"{self.root_data_dir}/episode_{indices[idx]:07d}.npz", allow_pickle=True)
+                episode.append({"actions": state['actions'],
+                                "rel_actions": state['rel_actions'],
+                                "robot_obs": state['robot_obs'],
+                                "language_annotation": annotation[1],
+                                })
             self.items.append(episode)
-            episode_lens.append(len(episode))
-        self.max_episode_len = max(episode_lens)
+            if len(episode) > self.max_episode_len:
+                self.max_episode_len = len(episode)
 
     def __len__(self):
         return len(self.items)
     
     def __getitem__(self, index):
-        
         episode = self.items[index]
 
+        source = []
+        for state in episode:
+            state_actions = [state[key] for key in self.keys]
+            source.append(np.concatenate(state_actions, axis=0))
 
-        source = [np.concatenate((state['action_xyz'], 
-                                 state['action_ExEyEz'], 
-                                 state['action_gripper_oc'], 
-                                 state['robot_state_xyz'], 
-                                 state['robot_state_ExEyEz'], 
-                                 state['robot_state_gripper_width'],
-                                 state['robot_state_arm_joints'], 
-                                 state['robot_state_gripper_oc'], 
-                                ), axis=None) 
-                                for state in episode]
-        source = self._check_padding(source)                 
+        pad_size = self._get_pad_size(source)
+        source = self._pad_with_zeros(source, pad_size)
         return source
     
-    def _check_padding(self, source):
+    def _get_pad_size(self, source):
+        return self.max_episode_len-len(source)
+    
+    def _pad_with_zeros(self, source, pad_size):
         pad = abs(source[0]*0)
         if len(source) < self.max_episode_len:
-            pads = [pad for _ in range(self.max_episode_len-len(source))]
+            pads = [pad for _ in range(pad_size)]
             source = source + pads
             return torch.tensor(source)
         else:
@@ -76,11 +66,20 @@ class CalvinDataset(Dataset):
 
 
 class CalvinDataModule(pl.LightningDataModule):
-    def __init__(self, train_dir=None, val_dir=None, batch_size=8, num_workers=0, pin_memory=False):
+    def __init__(
+        self, 
+        train_data_dir=None, 
+        val_data_dir=None,
+        keys=None, 
+        batch_size=8, 
+        num_workers=0, 
+        pin_memory=False
+        ):
         super().__init__()
 
-        self.train_dir = train_dir
-        self.val_dir = val_dir
+        self.train_data_dir = train_data_dir
+        self.val_data_dir = val_data_dir
+        self.keys = keys
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = pin_memory
@@ -93,10 +92,10 @@ class CalvinDataModule(pl.LightningDataModule):
     
     def load_split(self, split):
         if split == 'train':
-            root = self.train_dir
+            root_data_dir = self.train_data_dir
         elif split == 'val':
-            root = self.val_dir
-        return CalvinDataset(root=root)
+            root_data_dir = self.val_data_dir
+        return CalvinDataset(root_data_dir=root_data_dir, keys=self.keys)
     
     def train_dataloader(self):
         return DataLoader(
@@ -124,6 +123,4 @@ class CalvinDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=self.pin_memory,
         )
-
-
 
