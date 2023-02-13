@@ -10,7 +10,8 @@ trainer:
   precision: 16                # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
   check_val_every_n_epoch: 1
-  auto_scale_batch_size: null  # [None, "binsearch"]
+  auto_scale_batch_size: False 
+  auto_lr_find: False
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
   logger: False                # [False, "wandb", "tensorboard"]
