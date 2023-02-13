@@ -1,7 +1,4 @@
 import math
-import inspect
-from dataclasses import dataclass
-
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -73,14 +70,25 @@ class MLP(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.c_fc    = nn.Linear(config.model["n_embd"], 4 * config.model["n_embd"], bias=config.model["bias"])
-        self.c_proj  = nn.Linear(4 * config.model["n_embd"], config.model["n_embd"], bias=config.model["bias"])
-        self.gelu    = nn.GELU()
+        if config.model["mlp"] == "fc": 
+            self.c_fc    = nn.Linear(config.model["n_embd"], 4 * config.model["n_embd"], bias=config.model["bias"])
+            self.c_proj  = nn.Linear(4 * config.model["n_embd"], config.model["n_embd"], bias=config.model["bias"])
+        elif config.model["mlp"] == "fc": 
+            self.c_fc    = Conv1D(config.model["n_embd"], 4 * config.model["n_embd"])
+            self.c_proj  = Conv1D(4 * config.model["n_embd"], config.model["n_embd"])
+        else:
+            raise NotImplementedError("Other mlp connections are not implemented; supports only fc (default) and cnn1d!")
+        if config.model["activation"] == "gelu":
+            self.activation = nn.GELU()
+        elif config.model["activation"] == "relu":
+            self.activation = nn.ReLU()
+        else:
+            raise NotImplementedError("Other activations are not implemented; supports only gelu (default) and relu!")
         self.dropout = nn.Dropout(config.model["dropout"])
 
     def forward(self, x):
         x = self.c_fc(x)
-        x = self.gelu(x)
+        x = self.activation(x)
         x = self.c_proj(x)
         x = self.dropout(x)
         return x
@@ -95,3 +103,26 @@ class LayerNorm(nn.Module):
 
     def forward(self, input):
         return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-5)
+
+class Conv1D(nn.Module):
+    """
+    1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
+    Basically works like a linear layer but the weights are transposed.
+    Args:
+        nf (`int`): The number of output features.
+        nx (`int`): The number of input features.
+    """
+
+    def __init__(self, nf, nx):
+        super().__init__()
+        self.nf = nf
+        w = torch.empty(nx, nf)
+        nn.init.normal_(w, std=0.02)
+        self.weight = nn.Parameter(w)
+        self.bias = nn.Parameter(torch.zeros(nf))
+
+    def forward(self, x):
+        size_out = x.size()[:-1] + (self.nf,)
+        x = torch.addmm(self.bias, x.view(-1, x.size(-1)), self.weight)
+        x = x.view(size_out)
+        return x
