@@ -7,9 +7,9 @@ class Block(nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.ln_1 = LayerNorm(config.n_embd, bias=config.bias)
+        self.ln_1 = LayerNorm(config.model["n_embd"], bias=config.model["bias"])
         self.attn = CausalSelfAttention(config)
-        self.ln_2 = LayerNorm(config.n_embd, bias=config.bias)
+        self.ln_2 = LayerNorm(config.model["n_embd"], bias=config.model["bias"])
         self.mlp  = MLP(config)
 
     def forward(self, x):
@@ -106,6 +106,7 @@ class LayerNorm(nn.Module):
 
 class Conv1D(nn.Module):
     """
+    # ref: https://github.com/huggingface/transformers/blob/main/src/transformers/pytorch_utils.py#L94
     1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
     Basically works like a linear layer but the weights are transposed.
     Args:
