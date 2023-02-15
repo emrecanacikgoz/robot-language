@@ -18,8 +18,6 @@ def main(config):
     config = pl.utilities.parsing.AttributeDict(config)
     pl.seed_everything(config["seed"])
     print(config)
-    print(config.model["deneme"])
-    breakpoint()
     datamodule = CalvinDataModule(
         train_data_dir=config.data["train_data_dir"], 
         val_data_dir=config.data["val_data_dir"], 
@@ -30,8 +28,11 @@ def main(config):
         )
     datamodule.setup(stage='fit')
 
+    #d = CalvinDataset(root_data_dir=config.data["train_data_dir"], keys=config.data["keys"])
+    #dd = DataLoader(d,batch_size=3)
+    #x = next(iter(dd))
+    #breakpoint()
     model = gpt(config=config)
-
     # Initialize a logger
     if config.trainer["logger"] == "tensorboard":
         logger = TensorBoardLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
@@ -59,7 +60,7 @@ def main(config):
     )
 
     # Train the model ⚡
-    #trainer.fit(mnist_model, train_loader)
+    trainer.fit(model, datamodule)
 
 if __name__ == "__main__":
     main()
