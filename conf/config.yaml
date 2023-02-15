@@ -1,5 +1,4 @@
 seed: 42
-output: output.txt
 
 trainer:
   accelerator: "cpu"           # ["cpu", "gpu", "tpu", "ipu", "auto"]
@@ -20,17 +19,25 @@ trainer:
 data:
   train_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
   val_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
-  keys: ["actions", "rel_actions", "robot_obs"] # Can be "actions", "rel_actions", "robot_obs"
+  keys: ["actions", 
+         "rel_actions", 
+         "robot_obs", 
+         "robot_obs_tcp_position", 
+         "robot_obs_tcp_orientation", 
+         "robot_obs_gripper_opening_width", 
+         "robot_obs_arm_joint_states",
+         "gripper_action"
+        ] # Can be ["actions", "rel_actions", "robot_obs"]
   batch_size: 3
   num_workers: 0
   pin_memory: False
 
 model:
   block_size: 1024 # also used in max positional embeddings
-  vocab_size: null # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
-  n_layer: 12
-  n_head: 12
-  n_embd: 768
+  vocab_size: 1 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
+  n_layer: 4
+  n_head: 4
+  n_embd: 28
   dropout: 0.0
   bias: True
   activation: "gelu" # ["gelu", "relu"]

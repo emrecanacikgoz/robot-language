@@ -31,6 +31,11 @@ class CalvinDataset(Dataset):
                 episode.append({"actions": state['actions'],
                                 "rel_actions": state['rel_actions'],
                                 "robot_obs": state['robot_obs'],
+                                "robot_obs_tcp_position": state['robot_obs'][:3],
+                                "robot_obs_tcp_orientation": state['robot_obs'][3:6],
+                                "robot_obs_gripper_opening_width": state['robot_obs'][6:7],
+                                "robot_obs_arm_joint_states": state['robot_obs'][7:14],
+                                "gripper_action": state['robot_obs'][14:],
                                 "language_annotation": annotation[1],
                                 })
             self.items.append(episode)
@@ -60,9 +65,12 @@ class CalvinDataset(Dataset):
         if len(source) < self.max_episode_len:
             pads = [pad for _ in range(pad_size)]
             source = source + pads
-            return torch.tensor(source)
+            return torch.tensor(source, dtype=torch.float)
         else:
-            return torch.tensor(source)
+            return torch.tensor(source, dtype=torch.float)
+    
+    def _quantize(self, source):
+        pass
 
 
 class CalvinDataModule(pl.LightningDataModule):
@@ -87,6 +95,7 @@ class CalvinDataModule(pl.LightningDataModule):
     def setup(self, stage='fit'):
         if stage == 'fit':
             self.train_data = self.load_split(split='train')
+            self.val_data = self.load_split(split='val')
         if stage == 'val' or stage == 'predict':
             self.val_data = self.load_split(split='val')
     
