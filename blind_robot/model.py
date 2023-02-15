@@ -14,7 +14,6 @@ class gpt(LightningModule):
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
-            wte = nn.Embedding(config.model["vocab_size"], config.model["n_embd"]),
             wpe = nn.Embedding(config.model["block_size"], config.model["n_embd"]),
             drop = nn.Dropout(config.model["dropout"]),
             h    = nn.ModuleList([Block(config) for _ in range(config.model["n_layer"])]),
@@ -28,18 +27,18 @@ class gpt(LightningModule):
         for pn, p in self.named_parameters():
             if pn.endswith('c_proj.weight'):
                 torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.model["n_layer"]))
-        print("number of parameters: %.2fM" % (self.get_num_params()/1e6,))
+        print("number of parameters: %.2fM" % (self._get_num_params()/1e6,))
 
     def forward(self, idx, targets=None):
         device = self.config.trainer["accelerator"]
-        b, t = idx.size()
+        b, t, e = idx.size()
         assert t <= self.config.model["block_size"], f"Cannot forward sequence of length {t}, block size is only {self.config.model['block_size']}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
-        # forward the GPT model itself
-        tok_emb = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
-        x = self.transformer.drop(tok_emb + pos_emb)
+        breakpoint()
+        x = self.transformer.drop(idx + pos_emb)
+        breakpoint()
         for block in self.transformer.h:
             x = block(x)
         x = self.transformer.ln_f(x)
@@ -55,6 +54,14 @@ class gpt(LightningModule):
 
         return logits, loss
     
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+    
     def _get_num_params(self, non_embedding=True):
         """
         Return the number of parameters in the model.
@@ -68,33 +75,25 @@ class gpt(LightningModule):
         return n_params
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
+        x = batch
         logits = self(x)
-        loss = F.nll_loss(logits, y)
-        return loss
+        #loss = F.nll_loss(logits, y)
+        breakpoint()
+        return logits
 
     def validation_step(self, batch, batch_idx):
-        x, y = batch
+        x = batch
         logits = self(x)
-        loss = F.nll_loss(logits, y)
+        loss = F.nll_loss(logits, )
         preds = torch.argmax(logits, dim=1)
-        self.val_accuracy.update(preds, y)
-
-        # Calling self.log will surface up scalars for you in TensorBoard
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc", self.val_accuracy, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
         loss = F.nll_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
-        self.test_accuracy.update(preds, y)
 
-        # Calling self.log will surface up scalars for you in TensorBoard
-        self.log("test_loss", loss, prog_bar=True)
-        self.log("test_acc", self.test_accuracy, prog_bar=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer
