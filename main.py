@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 
-from blind_robot.data import CalvinDataset, CalvinDataModule
+from blind_robot.data import CalvinDataset
 from blind_robot.model import gpt
 
 
@@ -18,20 +18,23 @@ def main(config):
     config = pl.utilities.parsing.AttributeDict(config)
     pl.seed_everything(config["seed"])
     print(config)
-    datamodule = CalvinDataModule(
-        train_data_dir=config.data["train_data_dir"], 
-        val_data_dir=config.data["val_data_dir"], 
-        keys=config.data["keys"],
-        batch_size=config.data["batch_size"], 
-        num_workers=config.data["num_workers"], 
-        pin_memory=config.data["pin_memory"],
-        )
-    datamodule.setup(stage='fit')
+    
+    train_data = CalvinDataset(root_data_dir=config.data["train_data_dir"], keys=config.data["keys"])
+    val_data   = CalvinDataset(root_data_dir=config.data["val_data_dir"], keys=config.data["keys"])
 
-    #d = CalvinDataset(root_data_dir=config.data["train_data_dir"], keys=config.data["keys"])
-    #dd = DataLoader(d,batch_size=3)
-    #x = next(iter(dd))
-    #breakpoint()
+    train_loader = DataLoader(train_data, 
+                              batch_size=config.data["batch_size"], 
+                              shuffle=config.data["shuffle_train"],
+                              num_workers=config.data["num_workers"], 
+                              pin_memory=config.data["pin_memory"],
+                             )
+    val_loader = DataLoader(val_data, 
+                            batch_size=config.data["batch_size"], 
+                            shuffle=config.data["shuffle_val"], 
+                            num_workers=config.data["num_workers"], 
+                            pin_memory=config.data["pin_memory"],
+                           )
+
     model = gpt(config=config)
     # Initialize a logger
     if config.trainer["logger"] == "tensorboard":
@@ -56,11 +59,12 @@ def main(config):
         strategy=config.trainer["strategy"],
         resume_from_checkpoint=config.trainer["resume_from_checkpoint"],
         callbacks=[TQDMProgressBar(refresh_rate=20)],
+        default_root_dir=config.trainer["default_root_dir"],
         logger=logger,
     )
 
     # Train the model ⚡
-    trainer.fit(model, datamodule)
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 if __name__ == "__main__":
     main()
