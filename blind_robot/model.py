@@ -14,7 +14,7 @@ class gpt(LightningModule):
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
-            wpe = nn.Embedding(config.model["block_size"], config.model["n_embd"]),
+            wpe  = nn.Embedding(config.model["block_size"], config.model["n_embd"]),
             drop = nn.Dropout(config.model["dropout"]),
             h    = nn.ModuleList([Block(config) for _ in range(config.model["n_layer"])]),
             ln_f = LayerNorm(config.model["n_embd"], bias=config.model["bias"]),
@@ -32,21 +32,25 @@ class gpt(LightningModule):
     def forward(self, idx, targets=None):
         device = self.config.trainer["accelerator"]
         b, t, e = idx.size()
+        
         assert t <= self.config.model["block_size"], f"Cannot forward sequence of length {t}, block size is only {self.config.model['block_size']}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
-
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
-        breakpoint()
+        
         x = self.transformer.drop(idx + pos_emb)
-        breakpoint()
+        print(f"IDX: {idx.shape}")
+        print(f"pos: {pos.shape}")
+        print(f"pos_emb: {pos_emb.shape}")
+        print(f"x: {x.shape}")
         for block in self.transformer.h:
             x = block(x)
+        print(f"Decoder Output: {x.shape}")
         x = self.transformer.ln_f(x)
 
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=0)
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
@@ -73,27 +77,18 @@ class gpt(LightningModule):
         if non_embedding:
             n_params -= self.transformer.wpe.weight.numel()
         return n_params
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        return optimizer
 
     def training_step(self, batch, batch_idx):
         x = batch
         logits = self(x)
-        #loss = F.nll_loss(logits, y)
-        breakpoint()
+        print("Training Step")
         return logits
 
     def validation_step(self, batch, batch_idx):
         x = batch
         logits = self(x)
-        loss = F.nll_loss(logits, )
-        preds = torch.argmax(logits, dim=1)
-
-    def test_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        preds = torch.argmax(logits, dim=1)
-
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
-        return optimizer
+        self.log('val_loss', logits)
