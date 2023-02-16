@@ -6,19 +6,20 @@ trainer:
   max_epochs: 10
   max_steps: -1                # Disabled when -1
   gradient_clip_val: 1.0
-  precision: 16                # [64, 32, "bf16", 16]
+  precision: "bf16"            # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 5
   auto_scale_batch_size: False 
   auto_lr_find: False
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
+  default_root_dir: ./robot-language/checkpoints
   logger: False                # [False, "wandb", "tensorboard"]
 
 # data module
 data:
   train_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
-  val_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
+  val_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/validation"
   keys: ["actions", 
          "rel_actions", 
          "robot_obs", 
@@ -27,17 +28,19 @@ data:
          "robot_obs_gripper_opening_width", 
          "robot_obs_arm_joint_states",
          "gripper_action"
-        ] # Can be ["actions", "rel_actions", "robot_obs"]
+        ]
   batch_size: 3
-  num_workers: 0
+  num_workers: 4
   pin_memory: False
+  shuffle_train: True
+  shuffle_val: False
 
 model:
-  block_size: 1024 # also used in max positional embeddings
+  block_size: 65 # max context length, also used in max positional embeddings
   vocab_size: 1 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
   n_layer: 4
   n_head: 4
-  n_embd: 28
+  n_embd: 44
   dropout: 0.0
   bias: True
   activation: "gelu" # ["gelu", "relu"]
