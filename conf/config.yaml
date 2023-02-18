@@ -18,8 +18,11 @@ trainer:
 
 # data module
 data:
-  train_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
-  val_data_dir: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/validation"
+  data_format: "tsv" # [npy, tsv]
+  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/D-training.tsv"
+  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/D-validation.tsv"
+  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
+  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/validation"
   keys: ["actions", 
          "rel_actions", 
          "robot_obs", 
@@ -27,8 +30,10 @@ data:
          "robot_obs_tcp_orientation", 
          "robot_obs_gripper_opening_width", 
          "robot_obs_arm_joint_states",
-         "gripper_action"
+         "gripper_action",
+         "scene_obs"
         ]
+  max_length: 1024
   batch_size: 3
   num_workers: 4
   pin_memory: False
@@ -36,7 +41,7 @@ data:
   shuffle_val: False
 
 model:
-  block_size: 65 # max context length, also used in max positional embeddings
+  block_size: 1024 # max context length, also used in max positional embeddings
   vocab_size: 1 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
   n_layer: 4
   n_head: 4
