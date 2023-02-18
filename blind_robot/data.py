@@ -1,11 +1,7 @@
-import os, csv, time
 import numpy as np
 from tqdm import tqdm
 import torch
-from torch.utils.data import Dataset, DataLoader
-import pytorch_lightning as pl
-import pandas as pd
-
+from torch.utils.data import Dataset
 
 class CalvinDataset(Dataset):
     def __init__(
@@ -40,7 +36,6 @@ class CalvinDataset(Dataset):
                 state = np.load(f"{self.data}/episode_{indices[idx]:07d}.npz", allow_pickle=True)
                 episode.append({"actions": state['actions'],
                                 "rel_actions": state['rel_actions'],
-                                "robot_obs": state['robot_obs'],
                                 "robot_obs_tcp_position": state['robot_obs'][:3],
                                 "robot_obs_tcp_orientation": state['robot_obs'][3:6],
                                 "robot_obs_gripper_opening_width": state['robot_obs'][6:7],
@@ -61,9 +56,20 @@ class CalvinDataset(Dataset):
                 l=line.rstrip("\n").split('\t')
                 id = l[0]
                 state = [float(i) for i in l[1:]]
+                k = {"actions": state[0:7],
+                    "rel_actions": state[7:14],
+                    "robot_obs_tcp_position": state[14:17],
+                    "robot_obs_tcp_orientation": state[17:20],
+                    "robot_obs_gripper_opening_width": state[20:21],
+                    "robot_obs_arm_joint_states": state[21:28],
+                    "gripper_action": state[28:29],
+                    "scene_obs": state[29:],
+                    }
+                state = list()
+                for key in self.keys:
+                    state.extend(k[key])
                 states.append(state)
         self.items = self._split_equal_lengths(states)
-        breakpoint()
 
     def __len__(self):
         return len(self.items)

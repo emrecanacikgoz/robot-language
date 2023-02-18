@@ -38,7 +38,6 @@ def main(config):
                             num_workers=config.data["num_workers"], 
                             pin_memory=config.data["pin_memory"],
                            )
-    breakpoint()
     model = gpt(config=config)
 
     # Initialize a logger
