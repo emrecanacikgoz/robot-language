@@ -18,10 +18,14 @@ def main(config):
     config = pl.utilities.parsing.AttributeDict(config)
     pl.seed_everything(config["seed"])
     print(config)
-    
-    train_data = CalvinDataset(root_data_dir=config.data["train_data_dir"], keys=config.data["keys"])
-    val_data   = CalvinDataset(root_data_dir=config.data["val_data_dir"], keys=config.data["keys"])
-
+    if config.data["data_format"] == "tsv":
+        train_data = CalvinDataset(data=config.data["train_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+        val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+    elif config.data["data_format"] == "npy":
+        train_data = CalvinDataset(data=config.data["train_data_dir_npy"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+        val_data   = CalvinDataset(data=config.data["val_data_dir_npy"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+    else:
+        raise NotImplementedError("Only .tsv and .npy files supported!")
     train_loader = DataLoader(train_data, 
                               batch_size=config.data["batch_size"], 
                               shuffle=config.data["shuffle_train"],
@@ -34,8 +38,9 @@ def main(config):
                             num_workers=config.data["num_workers"], 
                             pin_memory=config.data["pin_memory"],
                            )
-
+    breakpoint()
     model = gpt(config=config)
+
     # Initialize a logger
     if config.trainer["logger"] == "tensorboard":
         logger = TensorBoardLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
