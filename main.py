@@ -19,7 +19,7 @@ def main(config):
     pl.seed_everything(config["seed"])
     print(config)
     if config.data["data_format"] == "tsv":
-        train_data = CalvinDataset(data=config.data["train_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+        train_data = CalvinDataset(data=config.data["val_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
         val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
     elif config.data["data_format"] == "npy":
         train_data = CalvinDataset(data=config.data["train_data_dir_npy"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])

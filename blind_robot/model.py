@@ -50,7 +50,12 @@ class gpt(LightningModule):
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             logits = self.lm_head(x)
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=0)
+            if self.config.model["loss"] == "softmax":
+                loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=0)
+            elif self.config.model["loss"] == "mse":
+                loss = F.mse_loss(logits, targets, size_average=None, reduce=None, reduction='mean') 
+            else:
+                raise NotImplementedError("Only Cross Entropy (classification) and Mean Square Error (regression) losses are supported!")
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
             logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
@@ -83,12 +88,13 @@ class gpt(LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
-        x = batch
-        logits = self(x)
-        print("Training Step")
-        return logits
+        x, y = batch
+        logits, loss = self(x, y)
+        self.log('train_loss', loss)
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        x = batch
-        logits = self(x)
-        self.log('val_loss', logits)
+        x, y = batch
+        logits, loss = self(x, y)
+        self.log('val_loss', loss)
+        return loss
