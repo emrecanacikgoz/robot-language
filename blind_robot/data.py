@@ -78,7 +78,10 @@ class CalvinDataset(Dataset):
         episode = self.items[index]
 
         if self.data_format == "tsv":
-            return torch.tensor(np.array(episode), dtype=torch.float)
+            data = torch.tensor(np.array(episode), dtype=torch.float)
+            x, y = data[:self.max_length], data[1:self.max_length+1]
+            return (x, y)
+            
         elif self.data_format == "npy":
             source = []
             for state in episode:
@@ -105,7 +108,7 @@ class CalvinDataset(Dataset):
     
     def _split_equal_lengths(self, states):
         print(f"Splitting states to {self.max_length} equal episodes:")
-        episodes = [states[i:i+self.max_length] for i in tqdm(range(0, len(states), self.max_length))]
+        episodes = [states[i:i+(self.max_length+1)] for i in tqdm(range(0, len(states), (self.max_length+1)))]
         episodes.pop()
         return episodes
 

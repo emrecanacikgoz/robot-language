@@ -23,15 +23,15 @@ data:
   val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/D-validation.tsv"
   train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
   val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/validation"
-  keys: ["actions", 
-         "rel_actions", 
-         #"robot_obs", 
-         "robot_obs_tcp_position", 
-         "robot_obs_tcp_orientation", 
-         "robot_obs_gripper_opening_width", 
-         "robot_obs_arm_joint_states",
-         #"gripper_action",
-         "scene_obs"
+  keys: ["actions",                         # 7-dimensional
+         "rel_actions",                     # 7-dimensional
+         #"robot_obs",                      # 15-dimensional
+         "robot_obs_tcp_position",          # 3-dimensional
+         "robot_obs_tcp_orientation",       # 3-dimensional
+         "robot_obs_gripper_opening_width", # 1-dimensional  
+         "robot_obs_arm_joint_states",      # 7-dimensional
+         #"gripper_action",                 # 1-dimensional
+         "scene_obs"                        # 24-dimensional
         ]
   max_length: 1024
   batch_size: 3
@@ -42,14 +42,15 @@ data:
 
 model:
   block_size: 1024 # max context length, also used in max positional embeddings
-  vocab_size: 1 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
+  vocab_size: 52 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
   n_layer: 4
   n_head: 4
-  n_embd: 53
+  n_embd: 52
   dropout: 0.0
   bias: True
   activation: "gelu" # ["gelu", "relu"]
   mlp: "fc" # ["fc", "cnn"]
+  loss: "mse" # ["softmax", "mse"]
 
 # hydra-specific
 hydra:
