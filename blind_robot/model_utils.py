@@ -4,24 +4,22 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 class Block(nn.Module):
-
     def __init__(self, config):
         super().__init__()
         self.ln_1 = LayerNorm(config.model["n_embd"], bias=config.model["bias"])
         self.attn = CausalSelfAttention(config)
         self.ln_2 = LayerNorm(config.model["n_embd"], bias=config.model["bias"])
-        self.mlp  = MLP(config)
+        self.feedforward  = FeedForward(config)
 
     def forward(self, x):
         print(f"\nBlock-x0: {x.shape}")
         x = x + self.attn(self.ln_1(x))
         print(f"Block-x1: {x.shape}")
-        x = x + self.mlp(self.ln_2(x))
+        x = x + self.feedforward(self.ln_2(x))
         print(f"Block-x2: {x.shape}\n")
         return x
 
 class CausalSelfAttention(nn.Module):
-
     def __init__(self, config):
         super().__init__()
         assert config.model["n_embd"] % config.model["n_head"] == 0,  f"Cannot parallelize since embedding size [{config.model['n_embd']}] is not divisable by number of heads [{config.model['n_head']}]" 
@@ -73,14 +71,13 @@ class CausalSelfAttention(nn.Module):
         print(f"y2: {y.shape}")
         return y
 
-class MLP(nn.Module):
-
+class FeedForward(nn.Module):
     def __init__(self, config):
         super().__init__()
-        if config.model["mlp"] == "fc": 
+        if config.model["feedforward"] == "fc": 
             self.c_fc    = nn.Linear(config.model["n_embd"], 4 * config.model["n_embd"], bias=config.model["bias"])
             self.c_proj  = nn.Linear(4 * config.model["n_embd"], config.model["n_embd"], bias=config.model["bias"])
-        elif config.model["mlp"] == "fc": 
+        elif config.model["feedforward"] == "cnn": 
             self.c_fc    = Conv1D(config.model["n_embd"], 4 * config.model["n_embd"])
             self.c_proj  = Conv1D(4 * config.model["n_embd"], config.model["n_embd"])
         else:
