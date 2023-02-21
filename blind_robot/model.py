@@ -9,8 +9,6 @@ from blind_robot.model_utils import Block, LayerNorm
 class gpt(LightningModule):
     def __init__(self, config):
         super().__init__()
-
-        assert config.model["vocab_size"] is not None, "Vocab Size is not Specified"
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
@@ -19,7 +17,6 @@ class gpt(LightningModule):
             h    = nn.ModuleList([Block(config) for _ in range(config.model["n_layer"])]),
             ln_f = LayerNorm(config.model["n_embd"], bias=config.model["bias"]),
         ))
-        self.lm_head = nn.Linear(config.model["n_embd"], config.model["vocab_size"], bias=config.model["bias"])
 
         # init all weights
         self.apply(self._init_weights)
@@ -30,7 +27,7 @@ class gpt(LightningModule):
         print("number of parameters: %.2fM" % (self._get_num_params()/1e6,))
 
     def forward(self, idx, targets=None):
-        device = self.config.trainer["accelerator"]
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         b, t, e = idx.size()
         
         assert t <= self.config.model["block_size"], f"Cannot forward sequence of length {t}, block size is only {self.config.model['block_size']}"
@@ -38,30 +35,28 @@ class gpt(LightningModule):
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
         
         x = self.transformer.drop(idx + pos_emb)
-        print(f"IDX: {idx.shape}")
-        print(f"pos: {pos.shape}")
-        print(f"pos_emb: {pos_emb.shape}")
-        print(f"x: {x.shape}")
+#        print(f"IDX: {idx.shape}")
+#        print(f"pos: {pos.shape}")
+#        print(f"pos_emb: {pos_emb.shape}")
+#        print(f"x: {x.shape}")
         for block in self.transformer.h:
             x = block(x)
-        print(f"Decoder Output: {x.shape}")
+#        print(f"Decoder Output: {x.shape}")
         x = self.transformer.ln_f(x)
 
         if targets is not None:
             # if we are given some desired targets also calculate the loss
-            logits = self.lm_head(x)
             if self.config.model["loss"] == "softmax":
-                loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=0)
+                loss = F.cross_entropy(x.view(-1, x.size(-1)), targets.view(-1), ignore_index=0)
             elif self.config.model["loss"] == "mse":
-                loss = F.mse_loss(logits, targets, size_average=None, reduce=None, reduction='mean') 
+                loss = F.mse_loss(x, targets, size_average=None, reduce=None, reduction='mean') 
             else:
                 raise NotImplementedError("Only Cross Entropy (classification) and Mean Square Error (regression) losses are supported!")
         else:
             # inference-time mini-optimization: only forward the lm_head on the very last position
-            logits = self.lm_head(x[:, [-1], :]) # note: using list [-1] to preserve the time dim
             loss = None
 
-        return logits, loss
+        return x, loss
     
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
@@ -91,10 +86,12 @@ class gpt(LightningModule):
         x, y = batch
         logits, loss = self(x, y)
         self.log('train_loss', loss)
+        print(f"Train Loss: {loss}")
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
         logits, loss = self(x, y)
         self.log('val_loss', loss)
+        print(f"Validation Loss: {loss}")
         return loss

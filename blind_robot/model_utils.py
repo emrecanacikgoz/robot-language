@@ -12,11 +12,11 @@ class Block(nn.Module):
         self.feedforward  = FeedForward(config)
 
     def forward(self, x):
-        print(f"\nBlock-x0: {x.shape}")
+#        print(f"\nBlock-x0: {x.shape}")
         x = x + self.attn(self.ln_1(x))
-        print(f"Block-x1: {x.shape}")
+#        print(f"Block-x1: {x.shape}")
         x = x + self.feedforward(self.ln_2(x))
-        print(f"Block-x2: {x.shape}\n")
+#        print(f"Block-x2: {x.shape}\n")
         return x
 
 class CausalSelfAttention(nn.Module):
@@ -38,24 +38,23 @@ class CausalSelfAttention(nn.Module):
         if not self.flash:
             print("WARNING: using slow attention. Flash Attention atm needs PyTorch nightly and dropout=0.0")
             # causal mask to ensure that attention is only applied to the left in the input sequence
-            self.register_buffer("bias", torch.tril(torch.ones(config.model["block_size"], config.model["block_size"]))
-                                        .view(1, 1, config.model["block_size"], config.model["block_size"]))
+            self.register_buffer("bias", torch.tril(torch.ones(config.model["block_size"], config.model["block_size"])).view(1, 1, config.model["block_size"], config.model["block_size"]))
 
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
-        print(f"attention-x: {x.shape}")
+#        print(f"attention-x: {x.shape}")
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
         q, k ,v  = self.c_attn(x).split(self.n_embd, dim=2)
-        print(f"attention-0: q: {q.shape}, k: {k.shape}, v: {v.shape}")
+#        print(f"attention-0: q: {q.shape}, k: {k.shape}, v: {v.shape}")
         k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
-        print(f"attention-1: q: {q.shape}, k: {k.shape}, v: {v.shape}")
+#        print(f"attention-1: q: {q.shape}, k: {k.shape}, v: {v.shape}")
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         if self.flash:
             # efficient attention using Flash Attention CUDA kernels
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout, is_causal=True)
-            print(f"attention-flash: {y.shape}")
+#            print(f"attention-flash: {y.shape}")
         else:
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
@@ -63,12 +62,12 @@ class CausalSelfAttention(nn.Module):
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
             y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
-            print(f"attention-normal: {y.shape}")
+#            print(f"attention-normal: {y.shape}")
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
-        print(f"y1: {y.shape}")
+#        print(f"y1: {y.shape}")
         # output projection
         y = self.resid_dropout(self.c_proj(y))
-        print(f"y2: {y.shape}")
+#        print(f"y2: {y.shape}")
         return y
 
 class FeedForward(nn.Module):
@@ -98,7 +97,10 @@ class FeedForward(nn.Module):
         return x
 
 class LayerNorm(nn.Module):
-    """ LayerNorm but with an optional bias. PyTorch doesn't support simply bias=False """
+    """
+    LayerNorm but with an optional bias. 
+    PyTorch doesn't support simply bias=False 
+    """
 
     def __init__(self, ndim, bias):
         super().__init__()
