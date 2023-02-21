@@ -19,7 +19,7 @@ def main(config):
     pl.seed_everything(config["seed"])
     print(config)
     if config.data["data_format"] == "tsv":
-        train_data = CalvinDataset(data=config.data["val_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+        train_data = CalvinDataset(data=config.data["train_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
         val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
     elif config.data["data_format"] == "npy":
         train_data = CalvinDataset(data=config.data["train_data_dir_npy"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
@@ -44,7 +44,7 @@ def main(config):
     if config.trainer["logger"] == "tensorboard":
         logger = TensorBoardLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
     elif config.trainer["logger"] == "wandb":
-        logger = WandbLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
+        logger = WandbLogger(save_dir=os.getcwd(), name="train-gpt1", project="train-gpt1")
     else:
         logger = False
 
@@ -62,8 +62,7 @@ def main(config):
         auto_lr_find=config.trainer["auto_lr_find"],
         strategy=config.trainer["strategy"],
         resume_from_checkpoint=config.trainer["resume_from_checkpoint"],
-        callbacks=[TQDMProgressBar(refresh_rate=20)],
-        default_root_dir=config.trainer["default_root_dir"],
+        enable_progress_bar=True,
         logger=logger,
     )
 

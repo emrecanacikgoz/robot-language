@@ -1,26 +1,26 @@
 seed: 42
 
 trainer:
-  accelerator: "cpu"           # ["cpu", "gpu", "tpu", "ipu", "auto"]
-  devices: 1
-  max_epochs: 10
+  accelerator: "auto"           # ["cpu", "gpu", "tpu", "ipu", "auto"]
+  devices: "auto"
+  max_epochs: 1000
   max_steps: -1                # Disabled when -1
   gradient_clip_val: 1.0
-  precision: "bf16"            # [64, 32, "bf16", 16]
+  precision: 16            # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
   check_val_every_n_epoch: 5
   auto_scale_batch_size: False 
   auto_lr_find: False
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
-  default_root_dir: ./robot-language/checkpoints
-  logger: False                # [False, "wandb", "tensorboard"]
+  enable_progress_bar: True
+  logger: wandb                # [False, "wandb", "tensorboard"]
 
 # data module
 data:
   data_format: "tsv" # [npy, tsv]
-  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/D-training.tsv"
-  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/D-validation.tsv"
+  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
+  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
   train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
   val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/validation"
   keys: ["actions",                         # 7-dimensional
@@ -34,7 +34,7 @@ data:
          "scene_obs"                        # 24-dimensional
         ]
   max_length: 1024
-  batch_size: 3
+  batch_size: 16
   num_workers: 4
   pin_memory: False
   shuffle_train: True
@@ -42,7 +42,7 @@ data:
 
 model:
   block_size: 1024 # max context length, also used in max positional embeddings
-  vocab_size: 52 # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
+  vocab_size: Null # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
   n_layer: 4
   n_head: 4
   n_embd: 52
