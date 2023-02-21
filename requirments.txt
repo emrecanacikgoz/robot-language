@@ -3,3 +3,4 @@ pytorch-lightning==1.5.9
 torch==1.10.1
 tqdm
 hydra-core
+wandb
