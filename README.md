@@ -10,6 +10,12 @@ conda activate blind_robot
 pip install -r requirments.txt
 ```
 
-## Dataloader
-Uncomment **breakpoint()** to observe and play with dataloader, easly.
-`python main.py`
+## Run
+See the `conf/config.yaml`. Run train.sh in top-level
+```
+sbatch train.sh
+```
+or simply
+```
+python main.py
+```
