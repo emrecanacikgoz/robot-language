@@ -1,9 +1,10 @@
-import torch
 import math
+
+import torch
 from pytorch_lightning import LightningModule
-from pytorch_lightning.loggers import CSVLogger
 from torch import nn
 from torch.nn import functional as F
+
 from blind_robot.model_utils import Block, LayerNorm
 
 class gpt(LightningModule):
@@ -18,7 +19,7 @@ class gpt(LightningModule):
             ln_f = LayerNorm(config.model["n_embd"], bias=config.model["bias"]),
         ))
 
-        # init all weights
+        # init weights
         self.apply(self._init_weights)
         # apply special scaled init to the residual projections, per GPT-2 paper
         for pn, p in self.named_parameters():
@@ -29,21 +30,19 @@ class gpt(LightningModule):
     def forward(self, idx, targets=None):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         b, t, e = idx.size()
-        
         assert t <= self.config.model["block_size"], f"Cannot forward sequence of length {t}, block size is only {self.config.model['block_size']}"
+
+        # apply positional embedding
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (1, t, n_embd)
-        
         x = self.transformer.drop(idx + pos_emb)
-#        print(f"IDX: {idx.shape}")
-#        print(f"pos: {pos.shape}")
-#        print(f"pos_emb: {pos_emb.shape}")
-#        print(f"x: {x.shape}")
+
+        # decoder
         for block in self.transformer.h:
             x = block(x)
-#        print(f"Decoder Output: {x.shape}")
         x = self.transformer.ln_f(x)
 
+        # loss
         if targets is not None:
             # if we are given some desired targets also calculate the loss
             if self.config.model["loss"] == "softmax":
@@ -79,7 +78,7 @@ class gpt(LightningModule):
         return n_params
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=float(self.config.data["lr"]))
         return optimizer
 
     def training_step(self, batch, batch_idx):
