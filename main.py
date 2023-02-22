@@ -1,15 +1,13 @@
 import hydra, os
 from omegaconf import OmegaConf
 
-import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks.progress import TQDMProgressBar
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
-
-from blind_robot.data import CalvinDataset
+from blind_robot.data import CalvinDataset, CalvinDataset_MLP
 from blind_robot.model import gpt
+from blind_robot.mlp import mlp
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -22,8 +20,8 @@ def main(config):
         train_data = CalvinDataset(data=config.data["train_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
         val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
     elif config.data["data_format"] == "npy":
-        train_data = CalvinDataset(data=config.data["train_data_dir_npy"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
-        val_data   = CalvinDataset(data=config.data["val_data_dir_npy"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+        train_data = CalvinDataset_MLP(data=config.data["train_data_dir_npy"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+        val_data   = CalvinDataset_MLP(data=config.data["val_data_dir_npy"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
     else:
         raise NotImplementedError("Only .tsv and .npy files supported!")
     train_loader = DataLoader(train_data, 
@@ -38,13 +36,15 @@ def main(config):
                             num_workers=config.data["num_workers"], 
                             pin_memory=config.data["pin_memory"],
                            )
-    model = gpt(config=config)
-
+    
+    # model = gpt(config=config)
+    model = mlp(config=config)
+    
     # Initialize a logger
     if config.trainer["logger"] == "tensorboard":
         logger = TensorBoardLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
     elif config.trainer["logger"] == "wandb":
-        logger = WandbLogger(save_dir=os.getcwd(), name="train-gpt1", project="train-gpt1")
+        logger = WandbLogger(save_dir=os.getcwd(), name=config.trainer["wandb_name"], project=config.trainer["wandb_project"])
     else:
         logger = False
 

@@ -6,7 +6,7 @@ trainer:
   max_epochs: 1000
   max_steps: -1                # Disabled when -1
   gradient_clip_val: 1.0
-  precision: 16            # [64, 32, "bf16", 16]
+  precision: 32            # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
   check_val_every_n_epoch: 5
   auto_scale_batch_size: False 
@@ -14,15 +14,17 @@ trainer:
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
   enable_progress_bar: True
-  logger: wandb                # [False, "wandb", "tensorboard"]
+  logger: False                # [False, "wandb", "tensorboard"]
+  wandb_name: "train-mlp1"
+  wandb_project: "train-mlp1"
 
 # data module
 data:
-  data_format: "tsv" # [npy, tsv]
+  data_format: "npy" # [npy, tsv]
   train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
   val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
-  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/training"
-  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/calvin_debug_dataset/validation"
+  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
+  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
   keys: ["actions",                         # 7-dimensional
          "rel_actions",                     # 7-dimensional
          #"robot_obs",                      # 15-dimensional
@@ -33,8 +35,9 @@ data:
          #"gripper_action",                 # 1-dimensional
          "scene_obs"                        # 24-dimensional
         ]
-  max_length: 1024
+  max_length: 64
   batch_size: 16
+  lr: "1e-4"
   num_workers: 4
   pin_memory: False
   shuffle_train: True
@@ -51,6 +54,14 @@ model:
   activation: "gelu" # ["gelu", "relu"]
   feedforward: "fc" # ["fc", "cnn"]
   loss: "mse" # ["softmax", "mse"]
+
+model_mlp:
+  input_dim: 3380 
+  hidden_dim: 128
+  output_dim: 34
+  dropout: 0.1
+  bias: True
+  activation: "relu" # ["gelu", "relu"]
 
 # hydra-specific
 hydra:
