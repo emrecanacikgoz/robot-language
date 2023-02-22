@@ -1,55 +1,18 @@
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset
 
 class CalvinDataset(Dataset):
-    def __init__(
-        self, 
-        data=None,
-        data_format=None,
-        max_length=None,
-        keys=["actions", "rel_actions", "robot_obs"]
-        ):
+    def __init__(self, data=None, max_length=None, keys=None):
         super().__init__()
         self.data=data
         self.keys=keys
         self.max_length=max_length
-        self.data_format=data_format
-        if data_format == "tsv":
-            self._load_data_tsv()
-        elif data_format == "npy":
-            self._load_data_npy()
-        else:
-            raise NotImplementedError
-    
-    def _load_data_npy(self):
-        annotations = np.load(f"{self.data}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
-        annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"], annotations["language"]["task"]))
+        self._load_data()
 
-        self.items = list()
-        self.max_episode_len = -1
-        for annotation in tqdm(annotations):
-            indices = list(range(annotation[0][0], annotation[0][1] + 1))
-            episode = list()
-            for idx, _ in enumerate(indices):
-                state = np.load(f"{self.data}/episode_{indices[idx]:07d}.npz", allow_pickle=True)
-                episode.append({"actions": state['actions'],
-                                "rel_actions": state['rel_actions'],
-                                "robot_obs_tcp_position": state['robot_obs'][:3],
-                                "robot_obs_tcp_orientation": state['robot_obs'][3:6],
-                                "robot_obs_gripper_opening_width": state['robot_obs'][6:7],
-                                "robot_obs_arm_joint_states": state['robot_obs'][7:14],
-                                "gripper_action": state['robot_obs'][14:],
-                                "scene_obs": state['scene_obs'],
-                                "language": annotation[1],
-                                "task": annotation[2],
-                                })
-            self.items.append(episode)
-            if len(episode) > self.max_episode_len:
-                self.max_episode_len = len(episode)
-
-    def _load_data_tsv(self):
+    def _load_data(self):
         states = list()
         print(f"Loading the {self.data.split('/')[-1].split('-')[-1]} data from path {self.data}:")
         with open(self.data, "r") as f:
@@ -77,25 +40,10 @@ class CalvinDataset(Dataset):
     
     def __getitem__(self, index):
         episode = self.items[index]
+        data = torch.tensor(np.array(episode), dtype=torch.float)
+        x, y = data[:self.max_length], data[1:self.max_length+1]
+        return (x, y)
 
-        if self.data_format == "tsv":
-            data = torch.tensor(np.array(episode), dtype=torch.float)
-            x, y = data[:self.max_length], data[1:self.max_length+1]
-            return (x, y)
-            
-        elif self.data_format == "npy":
-            source = []
-            for state in episode:
-                state_actions = [state[key] for key in self.keys]
-                source.append(np.concatenate(state_actions, axis=0))
-            print(source)
-            pad_size = self._get_pad_size(source)
-            return self._pad_with_zeros(source, pad_size)
-
-        else:
-            source = None
-            raise NotImplementedError
-    
     def _get_pad_size(self, source):
         return self.max_episode_len-len(source)
     
@@ -119,18 +67,19 @@ class CalvinDataset(Dataset):
 
 
 class CalvinDataset_MLP(Dataset):
-    def __init__(self, data=None, data_format=None, max_length=None, keys=None):
+    def __init__(self, np_data=None, tsv_data=None, keys=None):
         super().__init__()
-        self.data=data
+        self.np_data=np_data
+        self.tsv_data=tsv_data
         self.keys=keys
-        self.max_length=max_length
-        self.data_format=data_format
-        self._load_data_npy()
+        self._load_data()
     
-    def _load_data_npy(self):
+    def _load_data(self):
         
+        # load full data
+        data = pd.read_csv(self.tsv_data, sep='\t', header=None)
         # load annotated %1 data
-        annotations = np.load(f"{self.data}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
+        annotations = np.load(f"{self.np_data}/lang_annotations/auto_lang_ann.npy", allow_pickle=True).item()
         
         # create labels
         labels = sorted(set(annotations["language"]["task"]))
@@ -140,22 +89,20 @@ class CalvinDataset_MLP(Dataset):
         # create datamodule
         annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"], annotations["language"]["task"]))
         self.items = list()
-        self.max_episode_len = -1
         for annotation in tqdm(annotations):
             indices = list(range(annotation[0][0], annotation[0][1] + 1))
             episode = list()
-            for idx, _ in enumerate(indices):
-                state = np.load(f"{self.data}/episode_{indices[idx]:07d}.npz", allow_pickle=True)
-                episode.append({"actions": state['actions'],
-                                "rel_actions": state['rel_actions'],
-                                "robot_obs_tcp_position": state['robot_obs'][:3],
-                                "robot_obs_tcp_orientation": state['robot_obs'][3:6],
-                                "robot_obs_gripper_opening_width": state['robot_obs'][6:7],
-                                "robot_obs_arm_joint_states": state['robot_obs'][7:14],
-                                "gripper_action": state['robot_obs'][14:],
-                                "scene_obs": state['scene_obs'],
-                                "language": annotation[1],
-                                "task": annotation[2],
+            for _idx, index in enumerate(indices):
+                state = data.loc[data[0] == index]
+                state = state.to_numpy().squeeze().tolist() 
+                episode.append({"actions": state[1:8],
+                                "rel_actions": state[8:15],
+                                "robot_obs_tcp_position": state[15:18],
+                                "robot_obs_tcp_orientation": state[18:21],
+                                "robot_obs_gripper_opening_width": state[21:22],
+                                "robot_obs_arm_joint_states": state[22:29],
+                                "gripper_action": state[29:30],
+                                "scene_obs": state[30:],
                                 "language": annotation[1],
                                 "task": self._encode(annotation[2]),
                                 })

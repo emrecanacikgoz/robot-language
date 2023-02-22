@@ -12,18 +12,24 @@ from blind_robot.mlp import mlp
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(config):
+
+    # set hydra
     config = OmegaConf.to_container(config)
     config = pl.utilities.parsing.AttributeDict(config)
     pl.seed_everything(config["seed"])
     print(config)
-    if config.data["data_format"] == "tsv":
-        train_data = CalvinDataset(data=config.data["train_data_file_tsv"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
-        val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
-    elif config.data["data_format"] == "npy":
-        train_data = CalvinDataset_MLP(data=config.data["train_data_dir_npy"], data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
-        val_data   = CalvinDataset_MLP(data=config.data["val_data_dir_npy"],   data_format=config.data["data_format"], max_length=config.data["max_length"], keys=config.data["keys"])
+
+    # initialize dataloader
+    if config.data["task"] == "gpt":
+        train_data = CalvinDataset(data=config.data["train_data_file_tsv"], max_length=config.data["max_length"], keys=config.data["keys"])
+        val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   max_length=config.data["max_length"], keys=config.data["keys"])
+    elif config.data["task"] == "mlp":
+        train_data = CalvinDataset_MLP(np_data=config.data["train_data_dir_npy"], tsv_data=config.data["train_data_file_tsv"], keys=config.data["keys"])
+        val_data   = CalvinDataset_MLP(np_data=config.data["val_data_dir_npy"],   tsv_data=config.data["val_data_file_tsv"],   keys=config.data["keys"])
     else:
-        raise NotImplementedError("Only .tsv and .npy files supported!")
+        raise NotImplementedError("Only gpt and mlp dataloaders supported!")
+    
+    # load data
     train_loader = DataLoader(train_data, 
                               batch_size=config.data["batch_size"], 
                               shuffle=config.data["shuffle_train"],
@@ -36,11 +42,16 @@ def main(config):
                             num_workers=config.data["num_workers"], 
                             pin_memory=config.data["pin_memory"],
                            )
+
+    # initialize model                     
+    if config.data["task"] == "gpt":
+        model = gpt(config=config)
+    elif config.data["task"] == "mlp":
+        model = mlp(config=config)
+    else:
+        raise NotImplementedError("Only gpt and mlp models supported!")
     
-    # model = gpt(config=config)
-    model = mlp(config=config)
-    
-    # Initialize a logger
+    # initialize logger
     if config.trainer["logger"] == "tensorboard":
         logger = TensorBoardLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
     elif config.trainer["logger"] == "wandb":
@@ -48,7 +59,7 @@ def main(config):
     else:
         logger = False
 
-    # Initialize a trainer
+    # Initialize trainer
     trainer = pl.Trainer(
         accelerator=config.trainer["accelerator"],
         devices=config.trainer["devices"],
