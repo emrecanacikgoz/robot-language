@@ -5,7 +5,7 @@ from pytorch_lightning import LightningModule
 from torch import nn
 from torch.nn import functional as F
 
-from blind_robot.model_utils import Block, LayerNorm
+from blind_robot.models.gpt_utils import Block, LayerNorm
 
 class gpt(LightningModule):
     def __init__(self, config):
@@ -13,10 +13,10 @@ class gpt(LightningModule):
         self.config = config
 
         self.transformer = nn.ModuleDict(dict(
-            wpe  = nn.Embedding(config.model["block_size"], config.model["n_embd"]),
-            drop = nn.Dropout(config.model["dropout"]),
-            h    = nn.ModuleList([Block(config) for _ in range(config.model["n_layer"])]),
-            ln_f = LayerNorm(config.model["n_embd"], bias=config.model["bias"]),
+            wpe  = nn.Embedding(config.model_gpt["block_size"], config.model_gpt["n_embd"]),
+            drop = nn.Dropout(config.model_gpt["dropout"]),
+            h    = nn.ModuleList([Block(config) for _ in range(config.model_gpt["n_layer"])]),
+            ln_f = LayerNorm(config.model_gpt["n_embd"], bias=config.model_gpt["bias"]),
         ))
 
         # init weights
@@ -24,13 +24,14 @@ class gpt(LightningModule):
         # apply special scaled init to the residual projections, per GPT-2 paper
         for pn, p in self.named_parameters():
             if pn.endswith('c_proj.weight'):
-                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.model["n_layer"]))
+                torch.nn.init.normal_(p, mean=0.0, std=0.02/math.sqrt(2 * config.model_gpt["n_layer"]))
         print("number of parameters: %.2fM" % (self._get_num_params()/1e6,))
 
     def forward(self, idx, targets=None):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
         b, t, e = idx.size()
-        assert t <= self.config.model["block_size"], f"Cannot forward sequence of length {t}, block size is only {self.config.model['block_size']}"
+        assert t <= self.config.model_gpt["block_size"], f"Cannot forward sequence of length {t}, block size is only {self.config.model_gpt['block_size']}"
 
         # apply positional embedding
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
@@ -43,17 +44,12 @@ class gpt(LightningModule):
         x = self.transformer.ln_f(x)
 
         # loss
-        if targets is not None:
-            # if we are given some desired targets also calculate the loss
-            if self.config.model["loss"] == "softmax":
-                loss = F.cross_entropy(x.view(-1, x.size(-1)), targets.view(-1), ignore_index=0)
-            elif self.config.model["loss"] == "mse":
-                loss = F.mse_loss(x, targets, size_average=None, reduce=None, reduction='mean') 
-            else:
-                raise NotImplementedError("Only Cross Entropy (classification) and Mean Square Error (regression) losses are supported!")
+        if self.config.model_gpt["loss"] == "softmax":
+            loss = F.cross_entropy(x.view(-1, x.size(-1)), targets.view(-1), ignore_index=0)
+        elif self.config.model_gpt["loss"] == "mse":
+            loss = F.mse_loss(x, targets, size_average=None, reduce=None, reduction='mean') 
         else:
-            # inference-time mini-optimization: only forward the lm_head on the very last position
-            loss = None
+            raise NotImplementedError("Only Cross Entropy (classification) and Mean Square Error (regression) losses are supported!")
 
         return x, loss
     
@@ -83,14 +79,12 @@ class gpt(LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        logits, loss = self(x, y)
+        _logits, loss = self(x, y)
         self.log('train_loss', loss)
-        print(f"Train Loss: {loss}")
         return loss
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        logits, loss = self(x, y)
+        _logits, loss = self(x, y)
         self.log('val_loss', loss)
-        print(f"Validation Loss: {loss}")
         return loss

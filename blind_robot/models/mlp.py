@@ -1,5 +1,3 @@
-import math
-
 import torch
 from pytorch_lightning import LightningModule
 from torch import nn
@@ -14,8 +12,8 @@ class mlp(LightningModule):
 
         self.fc1 = nn.Linear(config.model_mlp["input_dim"],  config.model_mlp["hidden_dim"])
         self.fc2 = nn.Linear(config.model_mlp["hidden_dim"], config.model_mlp["hidden_dim"])
-        self.fc3 = nn.Linear(config.model_mlp["hidden_dim"], config.model_mlp["hidden_dim"])
-        self.fc4 = nn.Linear(config.model_mlp["hidden_dim"], config.model_mlp["output_dim"])
+        self.fc3 = nn.Linear(config.model_mlp["hidden_dim"], config.model_mlp["output_dim"])
+        
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=config.model_mlp["dropout"])
 
@@ -32,12 +30,8 @@ class mlp(LightningModule):
         
         x = self.fc2(x)
         x = self.relu(x)
-        x = self.dropout(x)
 
         x = self.fc3(x)
-        x = self.relu(x)
-
-        x = self.fc4(x)
         out = F.log_softmax(x, dim=1)
         return out
     
@@ -60,7 +54,6 @@ class mlp(LightningModule):
         loss = F.nll_loss(logits, y)
 
         self.log('train_loss', loss)
-        print(f"Train Loss: {loss}")
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -73,6 +66,4 @@ class mlp(LightningModule):
 
         self.log('val_loss', loss)
         self.log('val_acc', accu)
-        print(f"Validation Loss: {loss}")
-        print(f"Validation ACC: {accu}")
         return loss
