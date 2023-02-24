@@ -17,6 +17,7 @@ class mlp(LightningModule):
         self.fc3 = nn.Linear(config.model_mlp["hidden_dim"], config.model_mlp["hidden_dim"])
         self.fc4 = nn.Linear(config.model_mlp["hidden_dim"], config.model_mlp["output_dim"])
         self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(p=config.model_mlp["dropout"])
 
         # init weights
         self.apply(self._init_weights)
@@ -27,9 +28,12 @@ class mlp(LightningModule):
 
         x = self.fc1(x)
         x = self.relu(x)
-
+        x = self.dropout(x)
+        
         x = self.fc2(x)
         x = self.relu(x)
+        x = self.dropout(x)
+
         x = self.fc3(x)
         x = self.relu(x)
 
@@ -68,6 +72,7 @@ class mlp(LightningModule):
         accu = accuracy(preds, y, task='multiclass', num_classes=self.config.model_mlp["output_dim"])
 
         self.log('val_loss', loss)
+        self.log('val_acc', accu)
         print(f"Validation Loss: {loss}")
         print(f"Validation ACC: {accu}")
         return loss
