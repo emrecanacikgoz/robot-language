@@ -1,28 +1,29 @@
-import hydra, os
-from omegaconf import OmegaConf
+import os
+import hydra
+import omegaconf
 
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+from torch.utils.data import DataLoader
 
-from blind_robot.data import CalvinDataset, CalvinDataset_MLP
-from blind_robot.model import gpt
-from blind_robot.mlp import mlp
+from blind_robot.data import CalvinDataset_GPT, CalvinDataset_MLP
+from blind_robot.models.gpt import gpt
+from blind_robot.models.mlp import mlp
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(config):
 
     # set hydra
-    config = OmegaConf.to_container(config)
+    config = omegaconf.OmegaConf.to_container(config)
     config = pl.utilities.parsing.AttributeDict(config)
     pl.seed_everything(config["seed"])
     print(config)
 
     # initialize dataloader
     if config.data["task"] == "gpt":
-        train_data = CalvinDataset(data=config.data["train_data_file_tsv"], max_length=config.data["max_length"], keys=config.data["keys"])
-        val_data   = CalvinDataset(data=config.data["val_data_file_tsv"],   max_length=config.data["max_length"], keys=config.data["keys"])
+        train_data = CalvinDataset_GPT(data=config.data["train_data_file_tsv"], max_length=config.data["max_length"], keys=config.data["keys"])
+        val_data   = CalvinDataset_GPT(data=config.data["val_data_file_tsv"],   max_length=config.data["max_length"], keys=config.data["keys"])
     elif config.data["task"] == "mlp":
         train_data = CalvinDataset_MLP(np_data=config.data["train_data_dir_npy"], tsv_data=config.data["train_data_file_tsv"], keys=config.data["keys"])
         val_data   = CalvinDataset_MLP(np_data=config.data["val_data_dir_npy"],   tsv_data=config.data["val_data_file_tsv"],   keys=config.data["keys"])
@@ -30,18 +31,20 @@ def main(config):
         raise NotImplementedError("Only gpt and mlp dataloaders supported!")
     
     # load data
-    train_loader = DataLoader(train_data, 
-                              batch_size=config.data["batch_size"], 
-                              shuffle=config.data["shuffle_train"],
-                              num_workers=config.data["num_workers"], 
-                              pin_memory=config.data["pin_memory"],
-                             )
-    val_loader = DataLoader(val_data, 
-                            batch_size=config.data["batch_size"], 
-                            shuffle=config.data["shuffle_val"], 
-                            num_workers=config.data["num_workers"], 
-                            pin_memory=config.data["pin_memory"],
-                           )
+    train_loader = DataLoader(
+        train_data, 
+        batch_size=config.data["batch_size"], 
+        shuffle=config.data["shuffle_train"], 
+        num_workers=config.data["num_workers"], 
+        pin_memory=config.data["pin_memory"],
+    )
+    val_loader = DataLoader(
+        val_data, 
+        batch_size=config.data["batch_size"], 
+        shuffle=config.data["shuffle_val"], 
+        num_workers=config.data["num_workers"], 
+        pin_memory=config.data["pin_memory"],
+    )
 
     # initialize model                     
     if config.data["task"] == "gpt":
@@ -67,11 +70,11 @@ def main(config):
         max_steps=config.trainer["max_steps"],
         gradient_clip_val=config.trainer["gradient_clip_val"],
         precision=config.trainer["precision"],
+        strategy=config.trainer["strategy"],
         accumulate_grad_batches=config.trainer["accumulate_grad_batches"],
         check_val_every_n_epoch=config.trainer["check_val_every_n_epoch"],
         auto_scale_batch_size=config.trainer["auto_scale_batch_size"],
         auto_lr_find=config.trainer["auto_lr_find"],
-        strategy=config.trainer["strategy"],
         resume_from_checkpoint=config.trainer["resume_from_checkpoint"],
         enable_progress_bar=True,
         logger=logger,

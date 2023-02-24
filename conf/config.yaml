@@ -1,12 +1,12 @@
 seed: 42
 
 trainer:
-  accelerator: "auto"           # ["cpu", "gpu", "tpu", "ipu", "auto"]
+  accelerator: "auto"          # ["cpu", "gpu", "tpu", "ipu", "auto"]
   devices: "auto"
   max_epochs: 100
   max_steps: -1                # Disabled when -1
   gradient_clip_val: 1.0
-  precision: 32            # [64, 32, "bf16", 16]
+  precision: 32                # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
   check_val_every_n_epoch: 5
   auto_scale_batch_size: False 
@@ -14,9 +14,9 @@ trainer:
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
   enable_progress_bar: True
-  logger: "wandb"                # [False, "wandb", "tensorboard"]
+  logger: "wandb"              # [False, "wandb", "tensorboard"]
   wandb_name: "train-mlp1"
-  wandb_project: "train-mlp1"
+  wandb_project: "train-mlp1"  # You MUST create a project with ralted name in wandb.ai 
 
 # data module
 data:
@@ -43,7 +43,7 @@ data:
   shuffle_train: True
   shuffle_val: False
 
-model:
+model_gpt:
   block_size: 1024 # max context length, also used in max positional embeddings
   vocab_size: Null # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
   n_layer: 4
