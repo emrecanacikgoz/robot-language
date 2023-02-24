@@ -83,6 +83,8 @@ class CalvinDataset_MLP(Dataset):
         labels = sorted(set(annotations["language"]["task"]))
         self.stoi = { ch:i for i,ch in enumerate(labels) }
         self.itos = { i:ch for i,ch in enumerate(labels) }
+        print(f"stoi: {self.stoi}")
+        print(f"itos: {self.itos}")
 
         # create datamodule
         annotations = list(zip(annotations["info"]["indx"], annotations["language"]["ann"], annotations["language"]["task"]))

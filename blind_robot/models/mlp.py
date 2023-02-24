@@ -4,6 +4,8 @@ from torch import nn
 from torch.nn import functional as F
 from torchmetrics.functional import accuracy
 
+from blind_robot.data import CalvinDataset_MLP
+
 
 class mlp(LightningModule):
     def __init__(self, config):
@@ -66,4 +68,7 @@ class mlp(LightningModule):
 
         self.log('val_loss', loss)
         self.log('val_acc', accu)
+
+        print(f"Preds: {preds.tolist()}")
+        print(f"Target: {y.tolist()}")
         return loss
