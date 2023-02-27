@@ -1,19 +1,20 @@
 import os
+
 import hydra
 import omegaconf
-
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
 
-from blind_robot.data import CalvinDataset_GPT, CalvinDataset_MLP
+from blind_robot.data import CalvinDataset_GPT
+from blind_robot.data import CalvinDataset_MLP
 from blind_robot.models.gpt import gpt
 from blind_robot.models.mlp import mlp
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(config):
-
     # set hydra
     config = omegaconf.OmegaConf.to_container(config)
     config = pl.utilities.parsing.AttributeDict(config)
@@ -22,43 +23,65 @@ def main(config):
 
     # initialize dataloader
     if config.data["task"] == "gpt":
-        train_data = CalvinDataset_GPT(data=config.data["train_data_file_tsv"], max_length=config.data["max_length"], keys=config.data["keys"])
-        val_data   = CalvinDataset_GPT(data=config.data["val_data_file_tsv"],   max_length=config.data["max_length"], keys=config.data["keys"])
+        train_data = CalvinDataset_GPT(
+            data=config.data["train_data_file_tsv"],
+            max_length=config.data["max_length"],
+            keys=config.data["keys"],
+        )
+        val_data = CalvinDataset_GPT(
+            data=config.data["val_data_file_tsv"],
+            max_length=config.data["max_length"],
+            keys=config.data["keys"],
+        )
     elif config.data["task"] == "mlp":
-        train_data = CalvinDataset_MLP(np_data=config.data["train_data_dir_npy"], tsv_data=config.data["train_data_file_tsv"], keys=config.data["keys"])
-        val_data   = CalvinDataset_MLP(np_data=config.data["val_data_dir_npy"],   tsv_data=config.data["val_data_file_tsv"],   keys=config.data["keys"])
+        train_data = CalvinDataset_MLP(
+            np_data=config.data["train_data_dir_npy"],
+            tsv_data=config.data["train_data_file_tsv"],
+            keys=config.data["keys"],
+        )
+        val_data = CalvinDataset_MLP(
+            np_data=config.data["val_data_dir_npy"],
+            tsv_data=config.data["val_data_file_tsv"],
+            keys=config.data["keys"],
+        )
     else:
         raise NotImplementedError("Only gpt and mlp dataloaders supported!")
-    
+
     # load data
     train_loader = DataLoader(
-        train_data, 
-        batch_size=config.data["batch_size"], 
-        shuffle=config.data["shuffle_train"], 
-        num_workers=config.data["num_workers"], 
+        train_data,
+        batch_size=config.data["batch_size"],
+        shuffle=config.data["shuffle_train"],
+        num_workers=config.data["num_workers"],
         pin_memory=config.data["pin_memory"],
     )
     val_loader = DataLoader(
-        val_data, 
-        batch_size=config.data["batch_size"], 
-        shuffle=config.data["shuffle_val"], 
-        num_workers=config.data["num_workers"], 
+        val_data,
+        batch_size=config.data["batch_size"],
+        shuffle=config.data["shuffle_val"],
+        num_workers=config.data["num_workers"],
         pin_memory=config.data["pin_memory"],
     )
 
-    # initialize model                     
+    # initialize model
     if config.data["task"] == "gpt":
         model = gpt(config=config)
     elif config.data["task"] == "mlp":
         model = mlp(config=config)
     else:
         raise NotImplementedError("Only gpt and mlp models supported!")
-    
+
     # initialize logger
     if config.trainer["logger"] == "tensorboard":
-        logger = TensorBoardLogger(save_dir=os.getcwd(), version=1, name="lightning_logs")
+        logger = TensorBoardLogger(
+            save_dir=os.getcwd(), version=1, name="lightning_logs"
+        )
     elif config.trainer["logger"] == "wandb":
-        logger = WandbLogger(save_dir=os.getcwd(), name=config.trainer["wandb_name"], project=config.trainer["wandb_project"])
+        logger = WandbLogger(
+            save_dir=os.getcwd(),
+            name=config.trainer["wandb_name"],
+            project=config.trainer["wandb_project"],
+        )
     else:
         logger = False
 
@@ -82,6 +105,7 @@ def main(config):
 
     # Train the model ⚡
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
 
 if __name__ == "__main__":
     main()
