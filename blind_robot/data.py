@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
-class CalvinDataset_GPT(Dataset):
+class CalvinDatasetGPT(Dataset):
     def __init__(self, data=None, max_length=None, keys=None):
         super().__init__()
         self.data = data
@@ -21,11 +21,11 @@ class CalvinDataset_GPT(Dataset):
 
         # read data
         states = []
-        with open(self.data, "r") as f:
+        with open(self.data, "r", encoding="utf-8") as f:
             for line in tqdm(f):
                 # set data fields
                 l = line.rstrip("\n").split("\t")
-                _stateID, state = l[0], [float(i) for i in l[1:]]
+                _, state = l[0], [float(i) for i in l[1:]]
                 fields = {
                     "actions": state[0:7],
                     "rel_actions": state[7:14],
@@ -71,7 +71,7 @@ class CalvinDataset_GPT(Dataset):
         raise NotImplementedError
 
 
-class CalvinDataset_MLP(Dataset):
+class CalvinDatasetMLP(Dataset):
     def __init__(self, np_data=None, tsv_data=None, keys=None):
         super().__init__()
         self.np_data = np_data
@@ -91,7 +91,7 @@ class CalvinDataset_MLP(Dataset):
         # create labels
         labels = sorted(set(annotations["language"]["task"]))
         self.stoi = {ch: i for i, ch in enumerate(labels)}
-        self.itos = {i: ch for i, ch in enumerate(labels)}
+        self.itos = {i: ch for i, ch in enumerate(labels)}  # pylint: disable=R1721
         print(f"stoi: {self.stoi}")
         print(f"itos: {self.itos}")
 
@@ -107,7 +107,7 @@ class CalvinDataset_MLP(Dataset):
         for annotation in tqdm(annotations):
             indices = list(range(annotation[0][0], annotation[0][1] + 1))
             episode = []
-            for _idx, index in enumerate(indices):
+            for _, index in enumerate(indices):
                 state = data.loc[data[0] == index]
                 state = state.to_numpy().squeeze().to_list()
                 episode.append(
@@ -149,5 +149,5 @@ class CalvinDataset_MLP(Dataset):
     def _encode(self, string):
         return self.stoi[string]
 
-    def _decode(self, id):
-        return self.itos[id]
+    def _decode(self, idx):
+        return self.itos[idx]

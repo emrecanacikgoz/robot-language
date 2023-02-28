@@ -4,10 +4,8 @@ from torch import nn
 from torch.nn import functional as F
 from torchmetrics.functional import accuracy
 
-from blind_robot.data import CalvinDataset_MLP
 
-
-class mlp(LightningModule):
+class MLP(LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -57,6 +55,7 @@ class mlp(LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
+        del batch_idx
         x, y = batch
         logits = self(x)
 
@@ -66,6 +65,7 @@ class mlp(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        del batch_idx
         x, y = batch
         logits = self(x)
 
