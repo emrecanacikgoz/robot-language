@@ -9,14 +9,14 @@ trainer:
   precision: 32                # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
   check_val_every_n_epoch: 5
-  auto_scale_batch_size: False
+  auto_scale_batch_size: False 
   auto_lr_find: False
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
   enable_progress_bar: True
   logger: "wandb"              # [False, "wandb", "tensorboard"]
   wandb_name: "train-mlp1"
-  wandb_project: "train-mlp1"  # You MUST create a project with ralted name in wandb.ai
+  wandb_project: "train-mlp1"  # You MUST create a project with ralted name in wandb.ai 
 
 # data module
 data:
@@ -25,14 +25,15 @@ data:
   val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
   train_data_dir_npy: "/datasets/calvin/ABCD/training"
   val_data_dir_npy: "/datasets/calvin/ABCD/validation"
-  keys: ["actions",                         # 7-dimensional
+  keys: [
+         "actions",                         # 7-dimensional
          "rel_actions",                     # 7-dimensional
          #"robot_obs",                      # 15-dimensional
          "robot_obs_tcp_position",          # 3-dimensional
          "robot_obs_tcp_orientation",       # 3-dimensional
-         "robot_obs_gripper_opening_width", # 1-dimensional
+         "robot_obs_gripper_opening_width", # 1-dimensional  
          "robot_obs_arm_joint_states",      # 7-dimensional
-         #"gripper_action",                 # 1-dimensional
+         #"robot_obs_gripper_action",       # 1-dimensional
          "scene_obs"                        # 24-dimensional
         ]
   max_length: 64
@@ -56,7 +57,7 @@ model_gpt:
   loss: "mse" # ["softmax", "mse"]
 
 model_mlp:
-  input_dim: 3380
+  input_dim: 3380 
   hidden_dim: 128
   output_dim: 34
   dropout: 0.1

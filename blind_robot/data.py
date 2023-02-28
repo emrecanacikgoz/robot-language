@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -23,6 +24,7 @@ class CalvinDatasetGPT(Dataset):
         states = []
         with open(self.data, "r", encoding="utf-8") as f:
             for line in tqdm(f):
+
                 # set data fields
                 l = line.rstrip("\n").split("\t")
                 _, state = l[0], [float(i) for i in l[1:]]
@@ -33,7 +35,7 @@ class CalvinDatasetGPT(Dataset):
                     "robot_obs_tcp_orientation": state[17:20],
                     "robot_obs_gripper_opening_width": state[20:21],
                     "robot_obs_arm_joint_states": state[21:28],
-                    "gripper_action": state[28:29],
+                    "robot_obs_gripper_action": state[28:29],
                     "scene_obs": state[29:],
                 }
 
@@ -80,6 +82,7 @@ class CalvinDatasetMLP(Dataset):
         self._load_data()
 
     def _load_data(self):
+
         # load full data
         data = pd.read_csv(self.tsv_data, sep="\t", header=None)
 
@@ -109,7 +112,7 @@ class CalvinDatasetMLP(Dataset):
             episode = []
             for _, index in enumerate(indices):
                 state = data.loc[data[0] == index]
-                state = state.to_numpy().squeeze().to_list()
+                state = state.to_numpy().squeeze().tolist()
                 episode.append(
                     {
                         "actions": state[1:8],
@@ -142,12 +145,14 @@ class CalvinDatasetMLP(Dataset):
             x.append(np.concatenate(state_actions, axis=0))
             y.append(state["task"])
 
-        return torch.tensor(np.array(x), dtype=torch.float), torch.tensor(
-            np.array(y[0]), dtype=torch.long
-        )
+        return torch.tensor(np.array(x), dtype=torch.float), torch.tensor(np.array(y[0]), dtype=torch.long)
 
     def _encode(self, string):
         return self.stoi[string]
 
     def _decode(self, idx):
         return self.itos[idx]
+
+
+
+
