@@ -1,8 +1,8 @@
 import math
 
 import torch
+from torch import nn
 from torch.nn import functional as F
-import torch.nn as nn
 
 
 class Block(nn.Module):
@@ -23,8 +23,8 @@ class CausalSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         assert config.model_gpt["n_embd"] % config.model_gpt["n_head"] == 0, (
-            f"Cannot parallelize since embedding size [{config.model_gpt['n_embd']}] is"
-            f" not divisable by number of heads [{config.model_gpt['n_head']}]"
+            f"Cannot parallelize since embedding size [{config.model_gpt['n_embd']}]"
+            f" is not divisable by number of heads [{config.model_gpt['n_head']}]"
         )
 
         # key, query, value projections for all heads, but in a batch
@@ -73,24 +73,24 @@ class CausalSelfAttention(nn.Module):
 
     def forward(self, x):
         # batch size, sequence length, embedding dimensionality (n_embd)
-        B, T, C = x.size()
+        b, t, c = x.size()
 
         # calculate query, key, values for all heads in batch and move head forward to
         # be the batch dim
         q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
 
-        k = k.view(B, T, self.n_head, C // self.n_head).transpose(
+        k = k.view(b, t, self.n_head, c // self.n_head).transpose(
             1, 2
-        )  # (B, nh, T, hs)
-        q = q.view(B, T, self.n_head, C // self.n_head).transpose(
+        )  # (b, nh, t, hs)
+        q = q.view(b, t, self.n_head, c // self.n_head).transpose(
             1, 2
-        )  # (B, nh, T, hs)
-        v = v.view(B, T, self.n_head, C // self.n_head).transpose(
+        )  # (b, nh, t, hs)
+        v = v.view(b, t, self.n_head, c // self.n_head).transpose(
             1, 2
-        )  # (B, nh, T, hs)
+        )  # (b, nh, t, hs)
 
         # causal self-attention; Self-attend:
-        # (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+        # (b, nh, t, hs) x (b, nh, hs, t) -> (b, nh, t, t)
         if self.flash:
             # efficient attention using Flash Attention CUDA kernels
             y = torch.nn.functional.scaled_dot_product_attention(
@@ -100,13 +100,13 @@ class CausalSelfAttention(nn.Module):
         else:
             # manual implementation of attention
             att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
-            att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float("-inf"))
+            att = att.masked_fill(self.bias[:, :, :t, :t] == 0, float("-inf"))
             att = F.softmax(att, dim=-1)
             att = self.attn_dropout(att)
-            y = att @ v  # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+            y = att @ v  # (b, nh, t, t) x (b, nh, t, hs) -> (b, nh, t, hs)
 
         y = (
-            y.transpose(1, 2).contiguous().view(B, T, C)
+            y.transpose(1, 2).contiguous().view(b, t, c)
         )  # re-assemble all head outputs side by side
 
         # output projection
@@ -170,14 +170,16 @@ class LayerNorm(nn.Module):
         self.weight = nn.Parameter(torch.ones(ndim))
         self.bias = nn.Parameter(torch.zeros(ndim)) if bias else None
 
-    def forward(self, input):
-        return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-5)
+    def forward(self, x):
+        return F.layer_norm(x, self.weight.shape, self.weight, self.bias, 1e-5)
 
 
 class Conv1D(nn.Module):
     """
-    # ref: https://github.com/huggingface/transformers/blob/main/src/transformers/pytorch_utils.py#L94
-    1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
+    #ref: https://github.com/huggingface/transformers/
+    /blob/main/src/transformers/pytorch_utils.py#L94
+    1D-convolutional layer as defined by Radford et al. for OpenAI GPT
+    (and also used in GPT-2).
     Basically works like a linear layer but the weights are transposed.
     Args:
         nf (`int`): The number of output features.

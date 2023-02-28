@@ -1,5 +1,4 @@
 import collections
-import json
 
 import matplotlib.pyplot as plt
 
@@ -79,7 +78,7 @@ itos = {
 
 file = "/Users/emrecanacikgoz/Desktop/rl-project/robot-language/acc.txt"
 
-with open(file, "r") as f:
+with open(file, "r", encoding="utf-8") as f:
     lines = f.readlines()
 
     predictions, targets = [], []

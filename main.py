@@ -7,10 +7,10 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
 
-from blind_robot.data import CalvinDataset_GPT
-from blind_robot.data import CalvinDataset_MLP
-from blind_robot.models.gpt import gpt
-from blind_robot.models.mlp import mlp
+from blind_robot.data import CalvinDatasetGPT
+from blind_robot.data import CalvinDatasetMLP
+from blind_robot.models.gpt import GPT
+from blind_robot.models.mlp import MLP
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -23,23 +23,23 @@ def main(config):
 
     # initialize dataloader
     if config.data["task"] == "gpt":
-        train_data = CalvinDataset_GPT(
+        train_data = CalvinDatasetGPT(
             data=config.data["train_data_file_tsv"],
             max_length=config.data["max_length"],
             keys=config.data["keys"],
         )
-        val_data = CalvinDataset_GPT(
+        val_data = CalvinDatasetGPT(
             data=config.data["val_data_file_tsv"],
             max_length=config.data["max_length"],
             keys=config.data["keys"],
         )
     elif config.data["task"] == "mlp":
-        train_data = CalvinDataset_MLP(
+        train_data = CalvinDatasetMLP(
             np_data=config.data["train_data_dir_npy"],
             tsv_data=config.data["train_data_file_tsv"],
             keys=config.data["keys"],
         )
-        val_data = CalvinDataset_MLP(
+        val_data = CalvinDatasetMLP(
             np_data=config.data["val_data_dir_npy"],
             tsv_data=config.data["val_data_file_tsv"],
             keys=config.data["keys"],
@@ -65,9 +65,9 @@ def main(config):
 
     # initialize model
     if config.data["task"] == "gpt":
-        model = gpt(config=config)
+        model = GPT(config=config)
     elif config.data["task"] == "mlp":
-        model = mlp(config=config)
+        model = MLP(config=config)
     else:
         raise NotImplementedError("Only gpt and mlp models supported!")
 
@@ -108,4 +108,4 @@ def main(config):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=E1120

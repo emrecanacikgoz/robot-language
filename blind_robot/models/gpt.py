@@ -9,11 +9,11 @@ from blind_robot.models.gpt_utils import Block
 from blind_robot.models.gpt_utils import LayerNorm
 
 
-class gpt(LightningModule):
+class GPT(LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
-
+        # pylint: disable=use-dict-literal
         self.transformer = nn.ModuleDict(
             dict(
                 wpe=nn.Embedding(
@@ -37,12 +37,13 @@ class gpt(LightningModule):
                 torch.nn.init.normal_(
                     p, mean=0.0, std=0.02 / math.sqrt(2 * config.model_gpt["n_layer"])
                 )
+        # pylint: disable=C0209
         print("number of parameters: %.2fM" % (self._get_num_params() / 1e6,))
 
     def forward(self, idx, targets=None):
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        b, t, e = idx.size()
+        _, t, _ = idx.size()
         assert t <= self.config.model_gpt["block_size"], (
             f"Cannot forward sequence of length {t}, block size is only"
             f" {self.config.model_gpt['block_size']}"
@@ -106,13 +107,15 @@ class gpt(LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
+        del batch_idx
         x, y = batch
-        _logits, loss = self(x, y)
+        _, loss = self(x, y)
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
+        del batch_idx
         x, y = batch
-        _logits, loss = self(x, y)
+        _, loss = self(x, y)
         self.log("val_loss", loss)
         return loss
