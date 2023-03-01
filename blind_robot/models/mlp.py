@@ -36,7 +36,7 @@ class MLP(LightningModule):
         x = self.fc2(x)
         x = self.relu(x)
         x = self.dropout(x)
-        
+
         x = self.fc3(x)
         out = F.log_softmax(x, dim=1)
         return out
@@ -53,10 +53,19 @@ class MLP(LightningModule):
         optimizer = torch.optim.Adam(
             self.parameters(), lr=float(self.config.data["lr"])
         )
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            factor = self.config.data["lr_factor"],
+            patience = self.config.data["lr_patience"],
+            cooldown = self.config.data["lr_cooldown"],
+            min_lr = float(self.config.data["min_lr"]),
+            verbose = True,
+        )
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
 
     def training_step(self, batch, batch_idx):
         del batch_idx
+
         x, y = batch
         logits = self(x)
 
@@ -69,13 +78,14 @@ class MLP(LightningModule):
         return {"loss": loss, "acc": acc}
 
     def training_epoch_end(self, outputs):
-        loss = torch.stack([x["loss"] for x in outputs]).mean()
-        acc = torch.stack([x["acc"] for x in outputs]).mean()
+        loss = torch.stack([output["loss"] for output in outputs]).mean()
+        acc = torch.stack([output["acc"] for output in outputs]).mean()
         self.log("train_loss", loss, on_step=False, on_epoch=True)
-        self.log("train_acc", acc, on_step=False, on_epoch=True)
+        self.log("train_acc",   acc, on_step=False, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         del batch_idx
+
         x, y = batch
         logits = self(x)
 
@@ -85,13 +95,16 @@ class MLP(LightningModule):
             preds, y, task="multiclass", num_classes=self.config.model_mlp["output_dim"]
         )
 
-        print(f"Preds: {preds.tolist()}")
+        return {"loss": loss, "acc": acc, "y":y, "preds": preds}
+
+    def validation_epoch_end(self, outputs):
+        loss = torch.stack([output["loss"] for output in outputs]).mean()
+        acc = torch.stack([output["acc"] for output in outputs]).mean()
+        y = torch.stack([output["y"] for output in outputs]).view(-1)
+        preds = torch.stack([output["preds"] for output in outputs]).view(-1)
+
+        print(f"\nPreds: {preds.tolist()}")
         print(f"Target: {y.tolist()}")
 
-        return {"loss": loss, "acc": acc}
-    
-    def validation_epoch_end(self, outputs):
-        loss = torch.stack([x["loss"] for x in outputs]).mean()
-        acc = torch.stack([x["acc"] for x in outputs]).mean()
         self.log("val_loss", loss, on_step=False, on_epoch=True)
-        self.log("val_acc", acc, on_step=False, on_epoch=True)
+        self.log("val_acc",   acc, on_step=False, on_epoch=True)

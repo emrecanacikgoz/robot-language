@@ -8,38 +8,48 @@ trainer:
   gradient_clip_val: 1.0
   precision: 32                # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
-  check_val_every_n_epoch: 5
-  auto_scale_batch_size: False 
+  check_val_every_n_epoch: 1
+  auto_scale_batch_size: False
   auto_lr_find: False
   strategy: null               # [None, "ddp", "ddp_spawn"]
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
   enable_progress_bar: True
   logger: "wandb"              # [False, "wandb", "tensorboard"]
-  wandb_project: "hyperparameter-sweep" 
-  wandb_name: "hidden_dim_128-dropout_0.1-batchsize_8"
-  
+  wandb_project: "deneme"
+  wandb_name: "deneme-1"
+
 
 # data module
 data:
   task: "mlp" # [gpt, mlp]
-  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
-  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
-  train_data_dir_npy: "/datasets/calvin/ABCD/training"
-  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
+#  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
+#  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
+#  train_data_dir_npy: "/datasets/calvin/ABCD/training"
+#  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
+
+  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
+  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
+  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
+  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
+
   keys: [
          #"actions",                         # 7-dimensional
          #"rel_actions",                     # 7-dimensional
          #"robot_obs",                      # 15-dimensional
          "robot_obs_tcp_position",          # 3-dimensional
          "robot_obs_tcp_orientation",       # 3-dimensional
-         "robot_obs_gripper_opening_width", # 1-dimensional  
+         "robot_obs_gripper_opening_width", # 1-dimensional
          "robot_obs_arm_joint_states",      # 7-dimensional
          "robot_obs_gripper_action",        # 1-dimensional
          "scene_obs"                        # 24-dimensional
         ]
   max_length: 64
-  batch_size: 8
+  batch_size: 2
   lr: "1e-4"
+  lr_factor: 0.5
+  lr_patience: 5
+  lr_cooldown: 0
+  min_lr: "1e-6"
   num_workers: 4
   pin_memory: False
   shuffle_train: True
@@ -58,7 +68,7 @@ model_gpt:
   loss: "mse" # ["softmax", "mse"]
 
 model_mlp:
-  input_dim: 2535 
+  input_dim: 2535
   hidden_dim: 128
   output_dim: 34
   dropout: 0.1
