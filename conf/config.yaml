@@ -8,7 +8,7 @@ trainer:
   gradient_clip_val: 1.0
   precision: 32                # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
-  check_val_every_n_epoch: 1
+  check_val_every_n_epoch: 5
   auto_scale_batch_size: False
   auto_lr_find: False
   strategy: null               # [None, "ddp", "ddp_spawn"]
@@ -22,15 +22,15 @@ trainer:
 # data module
 data:
   task: "mlp" # [gpt, mlp]
-#  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
-#  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
-#  train_data_dir_npy: "/datasets/calvin/ABCD/training"
-#  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
+  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
+  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
+  train_data_dir_npy: "/datasets/calvin/ABCD/training"
+  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
 
-  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
-  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
-  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
-  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
+#  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
+#  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
+#  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
+#  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
 
   keys: [
          #"actions",                         # 7-dimensional

@@ -61,7 +61,15 @@ class MLP(LightningModule):
             min_lr = float(self.config.data["min_lr"]),
             verbose = True,
         )
-        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val_loss"}
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",
+                "frequency": self.config.trainer["check_val_every_n_epoch"]
+            },
+        }
+
 
     def training_step(self, batch, batch_idx):
         del batch_idx
