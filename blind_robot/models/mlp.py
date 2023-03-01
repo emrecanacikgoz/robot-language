@@ -93,7 +93,6 @@ class MLP(LightningModule):
 
     def validation_step(self, batch, batch_idx):
         del batch_idx
-
         x, y = batch
         logits = self(x)
 

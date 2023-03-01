@@ -9,12 +9,14 @@ from torch.utils.data import DataLoader
 
 from blind_robot.data import CalvinDatasetGPT
 from blind_robot.data import CalvinDatasetMLP
+from blind_robot.data import CalvinDatasetMLPVer2
 from blind_robot.models.gpt import GPT
 from blind_robot.models.mlp import MLP
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(config):
+
     # set hydra
     config = omegaconf.OmegaConf.to_container(config)
     config = pl.utilities.parsing.AttributeDict(config)
@@ -44,6 +46,17 @@ def main(config):
             tsv_data=config.data["val_data_file_tsv"],
             keys=config.data["keys"],
         )
+    elif config.data["task"] == "mlp-ver2":
+        train_data = CalvinDatasetMLPVer2(
+            np_data=config.data["train_data_dir_npy"],
+            tsv_data=config.data["train_data_file_tsv"],
+            keys=config.data["keys"],
+        )
+        val_data = CalvinDatasetMLPVer2(
+            np_data=config.data["val_data_dir_npy"],
+            tsv_data=config.data["val_data_file_tsv"],
+            keys=config.data["keys"],
+        )
     else:
         raise NotImplementedError("Only gpt and mlp dataloaders supported!")
 
@@ -66,7 +79,7 @@ def main(config):
     # initialize model
     if config.data["task"] == "gpt":
         model = GPT(config=config)
-    elif config.data["task"] == "mlp":
+    elif (config.data["task"] == "mlp") or (config.data["task"] == "mlp-ver2"):
         model = MLP(config=config)
     else:
         raise NotImplementedError("Only gpt and mlp models supported!")
@@ -85,7 +98,7 @@ def main(config):
     else:
         logger = False
 
-    # Initialize trainer
+    # initialize trainer
     trainer = pl.Trainer(
         accelerator=config.trainer["accelerator"],
         devices=config.trainer["devices"],
@@ -103,7 +116,7 @@ def main(config):
         logger=logger,
     )
 
-    # Train the model ⚡
+    # train the model ⚡
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
 
