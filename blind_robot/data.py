@@ -121,7 +121,7 @@ class CalvinDatasetMLP(Dataset):
                         "robot_obs_tcp_orientation": state[18:21],
                         "robot_obs_gripper_opening_width": state[21:22],
                         "robot_obs_arm_joint_states": state[22:29],
-                        "gripper_action": state[29:30],
+                        "robot_obs_gripper_action": state[29:30],
                         "scene_obs": state[30:],
                         "language": annotation[1],
                         "task": self._encode(annotation[2]),

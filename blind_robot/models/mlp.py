@@ -35,7 +35,8 @@ class MLP(LightningModule):
 
         x = self.fc2(x)
         x = self.relu(x)
-
+        x = self.dropout(x)
+        
         x = self.fc3(x)
         out = F.log_softmax(x, dim=1)
         return out
@@ -60,9 +61,18 @@ class MLP(LightningModule):
         logits = self(x)
 
         loss = F.nll_loss(logits, y)
+        preds = torch.argmax(logits, dim=1)
+        acc = accuracy(
+            preds, y, task="multiclass", num_classes=self.config.model_mlp["output_dim"]
+        )
 
-        self.log("train_loss", loss)
-        return loss
+        return {"loss": loss, "acc": acc}
+
+    def training_epoch_end(self, outputs):
+        loss = torch.stack([x["loss"] for x in outputs]).mean()
+        acc = torch.stack([x["acc"] for x in outputs]).mean()
+        self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_acc", acc, on_step=False, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         del batch_idx
@@ -71,13 +81,17 @@ class MLP(LightningModule):
 
         loss = F.nll_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
-        accu = accuracy(
+        acc = accuracy(
             preds, y, task="multiclass", num_classes=self.config.model_mlp["output_dim"]
         )
 
-        self.log("val_loss", loss)
-        self.log("val_acc", accu)
-
         print(f"Preds: {preds.tolist()}")
         print(f"Target: {y.tolist()}")
-        return loss
+
+        return {"loss": loss, "acc": acc}
+    
+    def validation_epoch_end(self, outputs):
+        loss = torch.stack([x["loss"] for x in outputs]).mean()
+        acc = torch.stack([x["acc"] for x in outputs]).mean()
+        self.log("val_loss", loss, on_step=False, on_epoch=True)
+        self.log("val_acc", acc, on_step=False, on_epoch=True)
