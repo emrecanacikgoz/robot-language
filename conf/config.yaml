@@ -75,6 +75,16 @@ model_mlp:
   bias: True
   activation: "relu" # ["gelu", "relu"]
 
+model_rnn:
+  input_size: 39
+  hidden_size: 128
+  num_layers: 1
+  bias: True
+  dropout: 0.1
+  bidirectional: False
+  output_dim: 34
+
+
 # hydra-specific
 hydra:
   run:
