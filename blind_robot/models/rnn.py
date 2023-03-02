@@ -10,16 +10,40 @@ class RNN(LightningModule):
         super().__init__()
         self.config = config
 
-        self.rnn = nn.RNN(
-            input_size=config.model_rnn["input_size"],
-            hidden_size=config.model_rnn["hidden_size"],
-            num_layers=config.model_rnn["num_layers"],
-            nonlinearity="tanh",
-            bias=config.model_rnn["bias"],
-            batch_first=True,
-            dropout=config.model_rnn["dropout"],
-            bidirectional=config.model_rnn["bidirectional"],
-        )
+
+        if self.config.model_rnn["rnn"] == "rnn":
+            self.rnn = nn.RNN(
+                input_size=config.model_rnn["input_size"],
+                hidden_size=config.model_rnn["hidden_size"],
+                num_layers=config.model_rnn["num_layers"],
+                nonlinearity="tanh",
+                bias=config.model_rnn["bias"],
+                batch_first=True,
+                dropout=config.model_rnn["dropout"],
+            )
+
+        elif self.config.model_rnn["rnn"] == "lstm":
+            self.rnn = nn.LSTM(
+                input_size=config.model_rnn["input_size"],
+                hidden_size=config.model_rnn["hidden_size"],
+                num_layers=config.model_rnn["num_layers"],
+                bias=config.model_rnn["bias"],
+                batch_first=True,
+                dropout=config.model_rnn["dropout"],
+            )
+
+        elif self.config.model_rnn["rnn"] == "gru":
+            self.rnn = nn.GRU(
+                input_size=config.model_rnn["input_size"],
+                hidden_size=config.model_rnn["hidden_size"],
+                num_layers=config.model_rnn["num_layers"],
+                bias=config.model_rnn["bias"],
+                batch_first=True,
+                dropout=config.model_rnn["dropout"],
+            )
+
+        else:
+            raise NotImplementedError("Only rnn, lstm, and gru is supported!")
 
         self.fc = nn.Linear(
             config.model_rnn["hidden_size"],
@@ -33,11 +57,22 @@ class RNN(LightningModule):
         h0 = torch.zeros(
             self.config.model_rnn["num_layers"],
             idx.size(0),
-            self.config.model_rnn["hidden_size"]
+            self.config.model_rnn["hidden_size"],
+        ).to(device)
+
+        c0 = torch.zeros(
+            self.config.model_rnn["num_layers"],
+            idx.size(0),
+            self.config.model_rnn["hidden_size"],
         ).to(device)
 
         # forward rnn
-        out, h_n = self.rnn(idx, h0)
+        if self.config.model_rnn["rnn"] == "rnn":
+            out, h_n = self.rnn(idx, h0)
+        elif self.config.model_rnn["rnn"] == "lstm":
+            out, (h_n, c_n) = self.rnn(out, (h0, c0))
+        elif self.config.model_rnn["rnn"] == "gru":
+            out, h_n = self.rnn(idx, h0)
 
         # decode the hidden state of the last time step
         logits = self.fc(out)

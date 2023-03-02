@@ -21,7 +21,7 @@ trainer:
 
 # data module
 data:
-  task: "mlp-ver2" # [gpt, mlp]
+  task: "mlp" # [gpt, mlp]
 #  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
 #  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
 #  train_data_dir_npy: "/datasets/calvin/ABCD/training"
@@ -76,12 +76,12 @@ model_mlp:
   activation: "relu" # ["gelu", "relu"]
 
 model_rnn:
+  rnn: "rnn"         #["rnn", "lstm", "gru"]
   input_size: 39
   hidden_size: 128
   num_layers: 1
   bias: True
   dropout: 0.1
-  bidirectional: False
   output_dim: 34
 
 
