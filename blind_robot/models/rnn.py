@@ -46,7 +46,7 @@ class RNN(LightningModule):
             raise NotImplementedError("Only rnn, lstm, and gru is supported!")
 
         self.fc = nn.Linear(
-            config.model_rnn["hidden_size"],
+            65*config.model_rnn["hidden_size"],
             config.model_rnn["output_dim"]
         )
 
@@ -70,11 +70,12 @@ class RNN(LightningModule):
         if self.config.model_rnn["rnn"] == "rnn":
             out, h_n = self.rnn(idx, h0)
         elif self.config.model_rnn["rnn"] == "lstm":
-            out, (h_n, c_n) = self.rnn(out, (h0, c0))
+            out, (h_n, c_n) = self.rnn(idx, (h0, c0))
         elif self.config.model_rnn["rnn"] == "gru":
             out, h_n = self.rnn(idx, h0)
 
         # decode the hidden state of the last time step
+        out = out.reshape(out.shape[0], -1)
         logits = self.fc(out)
         output = F.log_softmax(logits, dim=1)
 

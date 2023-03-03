@@ -12,6 +12,7 @@ from blind_robot.data import CalvinDatasetMLP
 from blind_robot.data import CalvinDatasetMLPVer2
 from blind_robot.models.gpt import GPT
 from blind_robot.models.mlp import MLP
+from blind_robot.models.rnn import RNN
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -35,7 +36,7 @@ def main(config):
             max_length=config.data["max_length"],
             keys=config.data["keys"],
         )
-    elif config.data["task"] == "mlp":
+    elif (config.data["task"] == "mlp") or (config.data["task"] == "rnn"):
         train_data = CalvinDatasetMLP(
             np_data=config.data["train_data_dir_npy"],
             tsv_data=config.data["train_data_file_tsv"],
@@ -81,8 +82,10 @@ def main(config):
         model = GPT(config=config)
     elif (config.data["task"] == "mlp") or (config.data["task"] == "mlp-ver2"):
         model = MLP(config=config)
+    elif (config.data["task"] == "rnn"):
+        model = RNN(config=config)
     else:
-        raise NotImplementedError("Only gpt and mlp models supported!")
+        raise NotImplementedError("Only gpt, mlp, and rnn are supported!")
 
     # initialize logger
     if config.trainer["logger"] == "tensorboard":
