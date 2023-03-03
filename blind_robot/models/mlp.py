@@ -50,8 +50,11 @@ class MLP(LightningModule):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=float(self.config.data["lr"])
+        optimizer = torch.optim.AdamW(
+            self.parameters(),
+            lr=float(self.config.data["lr"]),
+            betas=(self.config.data["beta1"], self.config.data["beta2"]),
+            weight_decay=self.config.data["weight_decay"],
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
