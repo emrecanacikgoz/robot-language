@@ -21,16 +21,16 @@ trainer:
 
 # data module
 data:
-  task: "mlp" # [gpt, mlp]
+  task: "rnn" # [gpt, mlp, rnn]
 #  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
 #  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
 #  train_data_dir_npy: "/datasets/calvin/ABCD/training"
 #  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
 
-  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
-  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
-  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
-  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
+  train_data_file_tsv: "/home/user/Desktop/research/data/debug-training.tsv"
+  val_data_file_tsv: "/home/user/Desktop/research/data/debug-validation.tsv"
+  train_data_dir_npy: "/home/user/Desktop/research/data/calvin_debug_dataset/training"
+  val_data_dir_npy: "/home/user/Desktop/research/data/calvin_debug_dataset/validation"
 
   keys: [
          #"actions",                         # 7-dimensional
@@ -44,7 +44,7 @@ data:
          "scene_obs"                        # 24-dimensional
         ]
   max_length: 64
-  batch_size: 2
+  batch_size: 16
   lr: "1e-4"
   lr_factor: 0.5
   lr_patience: 5
@@ -81,7 +81,7 @@ model_rnn:
   hidden_size: 128
   num_layers: 1
   bias: True
-  dropout: 0.1
+  dropout: 0
   output_dim: 34
 
 
