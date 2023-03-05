@@ -15,26 +15,26 @@ trainer:
   resume_from_checkpoint: null # [None, "some/path/to/my_checkpoint.ckpt"]
   enable_progress_bar: True
   logger: "wandb"              # [False, "wandb", "tensorboard"]
-  wandb_project: "deneme"
-  wandb_name: "deneme-1"
+  wandb_project: "dummy"
+  wandb_name: "dummy-run"
 
 
 # data module
 data:
-  task: "mlp" # [gpt, mlp]
-#  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
-#  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
-#  train_data_dir_npy: "/datasets/calvin/ABCD/training"
-#  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
+  task: "rnn" # [gpt, mlp, rnn]
+  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
+  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
+  train_data_dir_npy: "/datasets/calvin/ABCD/training"
+  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
 
-  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
-  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
-  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
-  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
+#  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
+#  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
+#  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
+#  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
 
   keys: [
-         #"actions",                         # 7-dimensional
-         #"rel_actions",                     # 7-dimensional
+         "actions",                         # 7-dimensional
+         "rel_actions",                     # 7-dimensional
          #"robot_obs",                      # 15-dimensional
          "robot_obs_tcp_position",          # 3-dimensional
          "robot_obs_tcp_orientation",       # 3-dimensional
@@ -44,7 +44,7 @@ data:
          "scene_obs"                        # 24-dimensional
         ]
   max_length: 64
-  batch_size: 2
+  batch_size: 32
   lr: "1e-4"
   lr_factor: 0.5
   lr_patience: 5
@@ -52,7 +52,7 @@ data:
   min_lr: "1e-6"
   beta1: 0.9
   beta2: 0.999
-  weight_decay: 0.01
+  weight_decay: 0.025
   num_workers: 4
   pin_memory: False
   shuffle_train: True
@@ -79,12 +79,12 @@ model_mlp:
   activation: "relu" # ["gelu", "relu"]
 
 model_rnn:
-  rnn: "rnn"         #["rnn", "lstm", "gru"]
-  input_size: 39
+  rnn: "lstm"         #["rnn", "lstm", "gru"]
+  input_size: 53
   hidden_size: 128
   num_layers: 1
   bias: True
-  dropout: 0.1
+  dropout: 0.3
   output_dim: 34
 
 
