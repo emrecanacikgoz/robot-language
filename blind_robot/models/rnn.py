@@ -45,10 +45,23 @@ class RNN(LightningModule):
         else:
             raise NotImplementedError("Only rnn, lstm, and gru is supported!")
 
-        self.fc = nn.Linear(
-            65*config.model_rnn["hidden_size"],
+        self.fc1 = nn.Linear(
+            (config.data["max_length"] + 1) * config.model_rnn["hidden_size"],
+            2048
+        )
+
+        self.fc2 = nn.Linear(
+            2048,
+            512
+        )
+
+        self.fc3 = nn.Linear(
+            512,
             config.model_rnn["output_dim"]
         )
+
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(p=config.model_rnn["dropout"])
 
     def forward(self, idx):
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -76,8 +89,16 @@ class RNN(LightningModule):
 
         # decode the hidden state of the last time step
         out = out.reshape(out.shape[0], -1)
-        logits = self.fc(out)
-        output = F.log_softmax(logits, dim=1)
+        x = self.fc1(out)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        x = self.fc2(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        x = self.fc3(x)
+        output = F.log_softmax(x, dim=1)
 
         return output
 
