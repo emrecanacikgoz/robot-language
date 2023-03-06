@@ -108,28 +108,28 @@ class CalvinDatasetMLP(Dataset):
         )
         self.items = []
         for annotation in tqdm(annotations):
-            indices = list(range(annotation[0][0], annotation[0][1] + 1))
-            episode = []
-            for _, index in enumerate(indices):
-                state = data.loc[data[0] == index]
-                state = state.to_numpy().squeeze().tolist()
-                episode.append(
-                    {
-                        "actions": state[1:8],
-                        "rel_actions": state[8:15],
-                        "robot_obs_tcp_position": state[15:18],
-                        "robot_obs_tcp_orientation": state[18:21],
-                        "robot_obs_gripper_opening_width": state[21:22],
-                        "robot_obs_arm_joint_states": state[22:29],
-                        "robot_obs_gripper_action": state[29:30],
-                        "scene_obs": state[30:],
-                        "language": annotation[1],
-                        "task": self._encode(annotation[2]),
-                    }
-                )
-
-            # drop episodes shorter than 65 to avoid padding
-            if len(episode) == 65:
+            if (annotation[0][1] - annotation[0][0]) < 64:
+                continue
+            else:
+                indices = list(range(annotation[0][0], annotation[0][1] + 1))
+                episode = []
+                for _, index in enumerate(indices):
+                    state = data.loc[data[0] == index]
+                    state = state.to_numpy().squeeze().tolist()
+                    episode.append(
+                        {
+                            "actions": state[1:8],
+                            "rel_actions": state[8:15],
+                            "robot_obs_tcp_position": state[15:18],
+                            "robot_obs_tcp_orientation": state[18:21],
+                            "robot_obs_gripper_opening_width": state[21:22],
+                            "robot_obs_arm_joint_states": state[22:29],
+                            "robot_obs_gripper_action": state[29:30],
+                            "scene_obs": state[30:],
+                            "language": annotation[1],
+                            "task": self._encode(annotation[2]),
+                        }
+                    )
                 self.items.append(episode)
 
     def __len__(self):
