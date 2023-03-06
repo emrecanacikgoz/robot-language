@@ -22,15 +22,15 @@ trainer:
 # data module
 data:
   task: "rnn" # [gpt, mlp, rnn]
-  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
-  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
-  train_data_dir_npy: "/datasets/calvin/ABCD/training"
-  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
+#  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
+#  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
+#  train_data_dir_npy: "/datasets/calvin/ABCD/training"
+#  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
 
-#  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
-#  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
-#  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
-#  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
+  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
+  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
+  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
+  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
 
   keys: [
          "actions",                         # 7-dimensional
@@ -86,6 +86,7 @@ model_rnn:
   bias: True
   dropout: 0.3
   output_dim: 34
+  final_output_rnn: "mean" # ["last_time_step", "mean"]
 
 
 # hydra-specific

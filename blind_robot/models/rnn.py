@@ -10,7 +10,6 @@ class RNN(LightningModule):
         super().__init__()
         self.config = config
 
-
         if self.config.model_rnn["rnn"] == "rnn":
             self.rnn = nn.RNN(
                 input_size=config.model_rnn["input_size"],
@@ -46,20 +45,13 @@ class RNN(LightningModule):
             raise NotImplementedError("Only rnn, lstm, and gru is supported!")
 
         self.fc1 = nn.Linear(
-            (config.data["max_length"] + 1) * config.model_rnn["hidden_size"],
-            2048
+            config.model_rnn["hidden_size"],
+            64
         )
-
         self.fc2 = nn.Linear(
-            2048,
-            512
-        )
-
-        self.fc3 = nn.Linear(
-            512,
+            64,
             config.model_rnn["output_dim"]
         )
-
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=config.model_rnn["dropout"])
 
@@ -87,6 +79,16 @@ class RNN(LightningModule):
         elif self.config.model_rnn["rnn"] == "gru":
             out, h_n = self.rnn(idx, h0)
 
+        if self.config.model_rnn["final_output_rnn"] == "mean":
+            out = torch.mean(out, dim=1)
+            print("\n\n==> Taking the mean of the all state outputs of RNN!\n")
+        elif self.config.model_rnn["final_output_rnn"] == "last_time_step":
+            out = out[:, -1, :]
+            print("\n\n==> Taking the mean of the final state output of RNN!\n")
+        else:
+            out = out
+            print("\n\n==> Taking the concatenation of the all state outputs of RNN!\n")
+
         # decode the hidden state of the last time step
         out = out.reshape(out.shape[0], -1)
         x = self.fc1(out)
@@ -94,10 +96,6 @@ class RNN(LightningModule):
         x = self.dropout(x)
 
         x = self.fc2(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-
-        x = self.fc3(x)
         output = F.log_softmax(x, dim=1)
 
         return output
@@ -135,7 +133,10 @@ class RNN(LightningModule):
         loss = F.nll_loss(logits, y)
         preds = torch.argmax(logits, dim=1)
         acc = accuracy(
-            preds, y, task="multiclass", num_classes=self.config.model_mlp["output_dim"]
+            preds,
+            y,
+            task="multiclass",
+            num_classes=self.config.model_mlp["output_dim"],
         )
 
         return {"loss": loss, "acc": acc}
