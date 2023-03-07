@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 from blind_robot.data import CalvinDatasetGPT
 from blind_robot.data import CalvinDatasetMLP
-from blind_robot.data import CalvinDatasetMLPVer2
+from blind_robot.data import CalvinDatasetMLP2
 from blind_robot.models.gpt import GPT
 from blind_robot.models.mlp import MLP
 from blind_robot.models.rnn import RNN
@@ -25,7 +25,7 @@ def main(config):
     print(config)
 
     # initialize dataloader
-    if config.data["task"] == "gpt":
+    if config.data["loader"] == "gpt":
         train_data = CalvinDatasetGPT(
             data=config.data["train_data_file_tsv"],
             max_length=config.data["max_length"],
@@ -36,7 +36,7 @@ def main(config):
             max_length=config.data["max_length"],
             keys=config.data["keys"],
         )
-    elif (config.data["task"] == "mlp") or (config.data["task"] == "rnn"):
+    elif (config.data["loader"] == "mlp") or (config.data["loader"] == "rnn"):
         train_data = CalvinDatasetMLP(
             np_data=config.data["train_data_dir_npy"],
             tsv_data=config.data["train_data_file_tsv"],
@@ -47,16 +47,14 @@ def main(config):
             tsv_data=config.data["val_data_file_tsv"],
             keys=config.data["keys"],
         )
-    elif config.data["task"] == "mlp-ver2":
-        train_data = CalvinDatasetMLPVer2(
-            np_data=config.data["train_data_dir_npy"],
-            tsv_data=config.data["train_data_file_tsv"],
-            keys=config.data["keys"],
+    elif config.data["loader"] == "mlp-ver2":
+        train_data = CalvinDatasetMLP2(
+            path=config.data["train_path"],
+            config=config,
         )
-        val_data = CalvinDatasetMLPVer2(
-            np_data=config.data["val_data_dir_npy"],
-            tsv_data=config.data["val_data_file_tsv"],
-            keys=config.data["keys"],
+        val_data = CalvinDatasetMLP2(
+            path=config.data["val_path"],
+            config=config,
         )
     else:
         raise NotImplementedError("Only gpt and mlp dataloaders supported!")
@@ -78,11 +76,11 @@ def main(config):
     )
 
     # initialize model
-    if config.data["task"] == "gpt":
+    if config.data["loader"] == "gpt":
         model = GPT(config=config)
-    elif (config.data["task"] == "mlp") or (config.data["task"] == "mlp-ver2"):
+    elif (config.data["loader"] == "mlp") or (config.data["loader"] == "mlp-ver2"):
         model = MLP(config=config)
-    elif (config.data["task"] == "rnn"):
+    elif (config.data["loader"] == "rnn"):
         model = RNN(config=config)
     else:
         raise NotImplementedError("Only gpt, mlp, and rnn are supported!")
@@ -121,7 +119,6 @@ def main(config):
 
     # train the model ⚡
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-
 
 if __name__ == "__main__":
     main()  # pylint: disable=E1120
