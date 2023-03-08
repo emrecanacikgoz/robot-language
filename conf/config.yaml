@@ -48,7 +48,7 @@ data:
         ]
   max_length: 64
   window: 64
-  batch_size: 2
+  batch_size: 32
   lr: "1e-4"
   lr_factor: 0.5
   lr_patience: 5
@@ -56,8 +56,8 @@ data:
   min_lr: "1e-6"
   beta1: 0.9
   beta2: 0.999
-  weight_decay: 0.025
-  num_workers: 4
+  weight_decay: 0.01
+  num_workers: 2
   pin_memory: False
   shuffle_train: True
   shuffle_val: False

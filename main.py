@@ -5,6 +5,7 @@ import omegaconf
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 
 from blind_robot.data import CalvinDatasetGPT
@@ -100,6 +101,7 @@ def main(config):
         logger = False
 
     # initialize trainer
+    checkpoint_callback = ModelCheckpoint(monitor="val_acc", mode="max")
     trainer = pl.Trainer(
         accelerator=config.trainer["accelerator"],
         devices=config.trainer["devices"],
@@ -113,6 +115,7 @@ def main(config):
         auto_scale_batch_size=config.trainer["auto_scale_batch_size"],
         auto_lr_find=config.trainer["auto_lr_find"],
         resume_from_checkpoint=config.trainer["resume_from_checkpoint"],
+        callbacks=[checkpoint_callback],
         enable_progress_bar=True,
         logger=logger,
     )
