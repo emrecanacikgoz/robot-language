@@ -8,12 +8,11 @@ from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 
+from blind_robot.data import CalvinDataset
 from blind_robot.data import CalvinDatasetGPT
-from blind_robot.data import CalvinDatasetMLP
-from blind_robot.data import CalvinDatasetMLP2
-from blind_robot.models.gpt import GPT
 from blind_robot.models.mlp import MLP
 from blind_robot.models.rnn import RNN
+from blind_robot.models.gpt import GPT
 
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
@@ -26,7 +25,16 @@ def main(config):
     print(config)
 
     # initialize dataloader
-    if config.data["loader"] == "gpt":
+    if (config["task"] == "mlp") or (config["task"] == "rnn"):
+        train_data = CalvinDataset(
+            path=config.data["train_path"],
+            config=config,
+        )
+        val_data = CalvinDataset(
+            path=config.data["val_path"],
+            config=config,
+        )
+    elif config["task"] == "gpt":
         train_data = CalvinDatasetGPT(
             data=config.data["train_data_file_tsv"],
             max_length=config.data["max_length"],
@@ -37,52 +45,32 @@ def main(config):
             max_length=config.data["max_length"],
             keys=config.data["keys"],
         )
-    elif (config.data["loader"] == "mlp") or (config.data["loader"] == "rnn"):
-        train_data = CalvinDatasetMLP(
-            np_data=config.data["train_data_dir_npy"],
-            tsv_data=config.data["train_data_file_tsv"],
-            keys=config.data["keys"],
-        )
-        val_data = CalvinDatasetMLP(
-            np_data=config.data["val_data_dir_npy"],
-            tsv_data=config.data["val_data_file_tsv"],
-            keys=config.data["keys"],
-        )
-    elif config.data["loader"] == "mlp-ver2":
-        train_data = CalvinDatasetMLP2(
-            path=config.data["train_path"],
-            config=config,
-        )
-        val_data = CalvinDatasetMLP2(
-            path=config.data["val_path"],
-            config=config,
-        )
     else:
         raise NotImplementedError("Only gpt and mlp dataloaders supported!")
 
     # load data
     train_loader = DataLoader(
         train_data,
-        batch_size=config.data["batch_size"],
+        batch_size=config.training["batch_size"],
         shuffle=config.data["shuffle_train"],
         num_workers=config.data["num_workers"],
         pin_memory=config.data["pin_memory"],
     )
     val_loader = DataLoader(
         val_data,
-        batch_size=config.data["batch_size"],
+        batch_size=config.training["batch_size"],
         shuffle=config.data["shuffle_val"],
         num_workers=config.data["num_workers"],
         pin_memory=config.data["pin_memory"],
     )
 
     # initialize model
-    if config.data["loader"] == "gpt":
-        model = GPT(config=config)
-    elif (config.data["loader"] == "mlp") or (config.data["loader"] == "mlp-ver2"):
+    if config["task"] == "mlp":
         model = MLP(config=config)
-    elif (config.data["loader"] == "rnn"):
+    elif config["task"] == "rnn":
         model = RNN(config=config)
+    elif config["task"] == "gpt":
+        model = GPT(config=config)
     else:
         raise NotImplementedError("Only gpt, mlp, and rnn are supported!")
 
@@ -107,7 +95,7 @@ def main(config):
         devices=config.trainer["devices"],
         max_epochs=config.trainer["max_epochs"],
         max_steps=config.trainer["max_steps"],
-        gradient_clip_val=config.trainer["gradient_clip_val"],
+        gradient_clip_val=config.training["gradient_clip_val"],
         precision=config.trainer["precision"],
         strategy=config.trainer["strategy"],
         accumulate_grad_batches=config.trainer["accumulate_grad_batches"],

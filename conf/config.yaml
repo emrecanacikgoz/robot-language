@@ -1,11 +1,12 @@
 seed: 42
 
+task: "mlp" # [mlp, rnn, gpt]
+
 trainer:
   accelerator: "auto"          # ["cpu", "gpu", "tpu", "ipu", "auto"]
   devices: "auto"
   max_epochs: 100
   max_steps: -1                # Disabled when -1
-  gradient_clip_val: 1.0
   precision: 32                # [64, 32, "bf16", 16]
   accumulate_grad_batches: 1
   check_val_every_n_epoch: 5
@@ -18,23 +19,24 @@ trainer:
   wandb_project: "dummy"
   wandb_name: "dummy-run"
 
+training:
+  batch_size: 32
+  lr: "1e-4"
+  lr_factor: 0.5
+  lr_patience: 5
+  lr_cooldown: 0
+  min_lr: "1e-6"
+  beta1: 0.9
+  beta2: 0.999
+  weight_decay: 0.01
+  gradient_clip_val: 1.0
 
-# data module
 data:
-  loader: "mlp-ver2" # [gpt, mlp, mlp-ver2, rnn]
 #  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
 #  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
-#  train_data_dir_npy: "/datasets/calvin/ABCD/training"
-#  val_data_dir_npy: "/datasets/calvin/ABCD/validation"
-
-#  train_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-training.tsv"
-#  val_data_file_tsv: "/Users/emrecanacikgoz/Desktop/rl-project/data/D_tsv/debug-validation.tsv"
-#  train_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/training"
-#  val_data_dir_npy: "/Users/emrecanacikgoz/Desktop/rl-project/data/calvin_debug_dataset/validation"
 
   train_path: "/Users/emrecanacikgoz/Desktop/rl-project/data/debug-training"
   val_path: "/Users/emrecanacikgoz/Desktop/rl-project/data/debug-validation"
-
   keys: [
          "actions",                         # 7-dimensional
          "rel_actions",                     # 7-dimensional
@@ -48,31 +50,10 @@ data:
         ]
   max_length: 64
   window: 64
-  batch_size: 32
-  lr: "1e-4"
-  lr_factor: 0.5
-  lr_patience: 5
-  lr_cooldown: 0
-  min_lr: "1e-6"
-  beta1: 0.9
-  beta2: 0.999
-  weight_decay: 0.01
   num_workers: 2
   pin_memory: False
   shuffle_train: True
   shuffle_val: False
-
-model_gpt:
-  block_size: 1024 # max context length, also used in max positional embeddings
-  vocab_size: Null # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
-  n_layer: 4
-  n_head: 4
-  n_embd: 52
-  dropout: 0.0
-  bias: True
-  activation: "gelu" # ["gelu", "relu"]
-  feedforward: "fc" # ["fc", "cnn"]
-  loss: "mse" # ["softmax", "mse"]
 
 model_mlp:
   input_dim: 4672
@@ -92,6 +73,17 @@ model_rnn:
   output_dim: 34
   final_output_rnn: "mean" # ["last_time_step", "mean"]
 
+model_gpt:
+  block_size: 1024 # max context length, also used in max positional embeddings
+  vocab_size: Null # GPT-2 vocab_size of 50257, padded up to nearest multiple of 64 for efficiency
+  n_layer: 4
+  n_head: 4
+  n_embd: 52
+  dropout: 0.0
+  bias: True
+  activation: "gelu" # ["gelu", "relu"]
+  feedforward: "fc" # ["fc", "cnn"]
+  loss: "mse" # ["softmax", "mse"]
 
 # hydra-specific
 hydra:

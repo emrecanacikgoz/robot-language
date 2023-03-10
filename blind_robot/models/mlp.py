@@ -41,16 +41,16 @@ class MLP(LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(
             self.parameters(),
-            lr=float(self.config.data["lr"]),
-            betas=(self.config.data["beta1"], self.config.data["beta2"]),
-            weight_decay=self.config.data["weight_decay"],
+            lr=float(self.config.training["lr"]),
+            betas=(self.config.training["beta1"], self.config.training["beta2"]),
+            weight_decay=self.config.training["weight_decay"],
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            factor = self.config.data["lr_factor"],
-            patience = self.config.data["lr_patience"],
-            cooldown = self.config.data["lr_cooldown"],
-            min_lr = float(self.config.data["min_lr"]),
+            factor = self.config.training["lr_factor"],
+            patience = self.config.training["lr_patience"],
+            cooldown = self.config.training["lr_cooldown"],
+            min_lr = float(self.config.training["min_lr"]),
             verbose = True,
         )
         return {
