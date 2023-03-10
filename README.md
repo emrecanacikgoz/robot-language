@@ -40,8 +40,8 @@ To-do:
 `{'context_length': 32, 'max_steps': 150000, 'batch_size': 32, 'lr': 0.0001, 'weight_decay': 0.1, 'input_dim': 2336, 'hidden': [512,512], 'dropout': 0.5}`
 
 - [ ] run **ABC-MLP** with using last 32 frames and all 61 (tactile) features:
-`{'context_length': 32, 'max_steps': 150000, 'batch_size': 32, 'lr': 0.0001, 'weight_decay': 0.25 'input_dim': 2336, 'hidden': [512,512], 'dropout': 0.75}`
-`{'context_length': 32, 'max_steps': 150000, 'batch_size': 32, 'lr': 0.0001, 'weight_decay': 0.2 'input_dim': 2336, 'hidden': [512,512], 'dropout': 0.7}`
+`{'context_length': 64, 'max_steps': 150000, 'batch_size': 32, 'lr': 0.0001, 'weight_decay': 0.25 'input_dim': 2336, 'hidden': [512,512], 'dropout': 0.75}`
+`{'context_length': 64, 'max_steps': 150000, 'batch_size': 32, 'lr': 0.0001, 'weight_decay': 0.2 'input_dim': 2336, 'hidden': [512,512], 'dropout': 0.7}`
 
 - [ ] run **ABCD-RNN** with using last 64 frames and all 73 features:
 `{'context_length': 64, 'max_steps': 150000, batch_size': 128, 'lr': 0.001, 'weight_decay': 0.1, 'input_dim': 4672, output_interval': 32, 'hidden_size': 512, 'num_layers': 3, 'dropout': 0.1}`

@@ -164,11 +164,12 @@ class RNN(LightningModule):
     def validation_epoch_end(self, outputs):
         loss = torch.stack([output["loss"] for output in outputs]).mean()
         acc = torch.stack([output["acc"] for output in outputs]).mean()
-        y = torch.stack([output["y"] for output in outputs]).view(-1)
-        preds = torch.stack([output["preds"] for output in outputs]).view(-1)
+        y = torch.cat([output["y"] for output in outputs], dim=0)
+        preds = torch.cat([output["preds"] for output in outputs], dim=0)
 
-        print(f"\nPreds: {preds.tolist()}")
-        print(f"Target: {y.tolist()}")
+        print(f"\nTarget: {y.tolist()}")
+        print(f"Preds: {preds.tolist()}")
+
 
         self.log("val_loss", loss, on_step=False, on_epoch=True)
         self.log("val_acc",   acc, on_step=False, on_epoch=True)
