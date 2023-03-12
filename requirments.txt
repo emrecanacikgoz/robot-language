@@ -11,3 +11,6 @@ pre-commit
 pandas
 scikit-learn
 seaborn
+chardet
+argparse
+gradio
