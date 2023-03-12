@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 class CalvinPreprocessor(object):
-    """Abstract class for the Calvin dataset."""
+    """Preprocessing utility the Calvin dataset."""
 
     directory: str = "/raid/lingo/data/calvin/"
     episode_regex: Pattern[AnyStr] = re.compile(r"episode_(\d{7})\.npz")
