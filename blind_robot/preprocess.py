@@ -11,12 +11,12 @@ from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 
 
-class CalvinPreprocessor:
+class CalvinPreprocessor(object):
     """Abstract class for the Calvin dataset."""
 
     directory: str = "/raid/lingo/data/calvin/"
     episode_regex: Pattern[AnyStr] = re.compile(r"episode_(\d{7})\.npz")
-    max_workers: int = 8
+    max_workers: int = 16
 
     def extract_language(
         self, subdirectory: str = "task_D_D/", split: str = "validation"
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     def test():
         preprocessor = CalvinPreprocessor()
 
-        subdirectory = "task_D_D"
+        subdirectory = "task_ABC_D"
         split = "training"
 
         data = preprocessor.extract_features(subdirectory=subdirectory, split=split)
@@ -176,7 +176,7 @@ if __name__ == "__main__":
             print(*d, sep="\t")
 
         data = preprocessor.extract_features(subdirectory=subdirectory, split=split)
-        data = list(itertools.islice(data, 10000))
+        data = list(data)
 
         preprocessor.regression_for_controller(
             preprocessor.get_controller_coordinates(data, field=30)
