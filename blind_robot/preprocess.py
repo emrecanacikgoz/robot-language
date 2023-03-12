@@ -1,3 +1,4 @@
+from concurrent.futures import ProcessPoolExecutor
 import glob
 import logging
 import os
@@ -15,6 +16,7 @@ class CalvinPreprocessor:
 
     directory: str = "/raid/lingo/data/calvin/"
     episode_regex: Pattern[AnyStr] = re.compile(r"episode_(\d{7})\.npz")
+    max_workers: int = 8
 
     def extract_language(
         self, subdirectory: str = "task_D_D/", split: str = "validation"
@@ -48,34 +50,39 @@ class CalvinPreprocessor:
                     data = np.load(path, allow_pickle=True)
                     yield data
 
+    def _read_features(self, idx: int, path: str):
+        data = np.load(path, allow_pickle=True, mmap_mode="r")
+        actions = data["actions"]  # 1-7(7)
+        rel_actions = data["rel_actions"]  # 8-14(7)
+        robot_obs = data["robot_obs"]  # 15-29(15)
+        scene_obs = data["scene_obs"]  # 30-53(24)
+        depth_tactile = data["depth_tactile"].mean(axis=(0, 1)) * 100.0
+        rgb_tactile = data["rgb_tactile"].mean(axis=(0, 1)) / 255.0
+        return (
+            idx,
+            *actions,
+            *rel_actions,
+            *robot_obs,
+            *scene_obs,
+            *depth_tactile,
+            *rgb_tactile,
+        )
+
     def extract_features(self, subdirectory: str = "debug", split: str = "validation"):
         """Extract numbers from the annotation files."""
         directory = os.path.join(self.directory, subdirectory, split)
+        executer = ProcessPoolExecutor(max_workers=self.max_workers)
+        buffer = []
         for file in tqdm(sorted(os.listdir(directory))):
             match = self.episode_regex.match(file)
             if match is not None:
                 idx = match.group(1)
                 path = os.path.join(directory, file)
-                data = np.load(path, allow_pickle=True, mmap_mode="r")
-                actions = data["actions"]  # 1-7(7)
-                rel_actions = data["rel_actions"]  # 8-14(7)
-                robot_obs = data["robot_obs"]  # 15-29(15)
-                scene_obs = data["scene_obs"]  # 30-53(24)
-                depth_tactile = data["depth_tactile"].mean(axis=(0, 1)) * 100.0
-                rgb_tactile = data["rgb_tactile"].mean(axis=(0, 1)) / 255.0
-                yield (
-                    idx,
-                    *np.concatenate(
-                        (
-                            actions,
-                            rel_actions,
-                            robot_obs,
-                            scene_obs,
-                            depth_tactile,
-                            rgb_tactile,
-                        )
-                    ),
-                )
+                buffer.append(executer.submit(self._read_features, idx, path))
+                if len(buffer) >= 10 * self.max_workers:
+                    for future in buffer:
+                        yield future.result()
+                    buffer = []
 
     def get_intervals(self, data: Iterable):
         interval_start = -1
@@ -125,9 +132,6 @@ class CalvinPreprocessor:
         # Load data from output of calvin_controller_coordinates
         data = pd.DataFrame(list(data))
 
-        # Output some stats:
-        print(data.describe().to_string())
-
         # Separate the independent and dependent variables
         inputs = data.iloc[:, 1:2].values
         x = data.iloc[:, 2].values
@@ -172,7 +176,7 @@ if __name__ == "__main__":
             print(*d, sep="\t")
 
         data = preprocessor.extract_features(subdirectory=subdirectory, split=split)
-        data = list(itertools.islice(data, 1000))
+        data = list(itertools.islice(data, 10000))
 
         preprocessor.regression_for_controller(
             preprocessor.get_controller_coordinates(data, field=30)
