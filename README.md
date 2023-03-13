@@ -21,19 +21,10 @@ python main.py
 ```
 
 ## Leaderboards
-### ABCD
-|  **checkpoint**  | **train_loss** |  **val_loss**  | **train_acc**  |   **val_acc**  |
-| ---------------- | -------------- | -------------- | -------------- | -------------- |
-
-
-### ABC
-|  **checkpoint**  | **train_loss** |  **val_loss**  | **train_acc**  |   **val_acc**  |
-| ---------------- | -------------- | -------------- | -------------- | -------------- |
-
-
-### D
-|  **checkpoint**  | **train_loss** |  **val_loss**  | **train_acc**  |   **val_acc**  |
-| ---------------- | -------------- | -------------- | -------------- | -------------- |
+|  **checkpoint**  |  **environment** |  **model**       |  **wandb**       | **Train Data**       | **Val Data**       | **train_loss** |  **val_loss**  | **train_acc**  |   **val_acc**  |
+| ---------------- | ---------------- | ---------------- | ---------------- |--------------------- |------------------- | -------------- | -------------- | -------------- | -------------- |
+|[run05-mlp-97dim-window64-epoch300-bs32-lr0.0001-wd0.15-2xhidden512-dout0.6](https://drive.google.com/file/d/10i3Ddm8sDSVow8d1a-rXuDsxOcfOqn1F/view?usp=share_link)| D | mlp | [link](https://wandb.ai/kuisai/230313-D_D/runs/7rbps6td?workspace=user-eacikgoz17)| D | D | 0.03181 | 0.2057 | 99.07% | 95.48% |
+|[run02-mlp-97dim-window64-epoch300-bs32-lr0.0001-wd0.1-2xhidden512-dout0.5](https://drive.google.com/file/d/1TnRe5uB35HmHrCEfXmIzVRYc2rjh9Ns-/view?usp=share_link)| D | mlp | [link](https://wandb.ai/kuisai/230313-D_D/runs/aj6a4qav?workspace=user-eacikgoz17)| D | D | 0.01193 | 0.2190 | 99.80% | 95.30% |
 
 To-do:
 - [ ] run **ABCD-MLP** with using last 32 frames and all 73 features:
