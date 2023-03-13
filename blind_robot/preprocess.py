@@ -325,7 +325,7 @@ if __name__ == "__main__":
 
     def pipeline():
         preprocessor = CalvinPreprocessor()
-        for subdirectory in ["D", "ABC"]:
+        for subdirectory in ["D", "ABC", "ABCD"]:
             for split in [
                 "training",
                 "validation",
@@ -335,4 +335,4 @@ if __name__ == "__main__":
                     pickle.dump(data, f)
 
     test()
-    pipeline()
+    # pipeline()
