@@ -11,6 +11,9 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 
+from blind_robot.utils.data_utils import fieldnames as FIELD_NAMES
+from blind_robot.utils.data_utils import int2task as TASK_LABELS
+
 
 class CalvinPreprocessor:
     """Preprocessing utility the Calvin dataset.
@@ -272,9 +275,19 @@ class CalvinPreprocessor:
 
         language_data = list(self.extract_language(subdirectory, split))
 
-        language_start_end_ids = np.array([d[:2] for d in language_data], dtype=int)
+        language_start_ids = np.array([d[0] for d in language_data], dtype=int)
+        language_end_ids = np.array([d[1] for d in language_data], dtype=int)
         language_task_labels = np.array([d[2] for d in language_data], dtype=str)
         language_instructions = np.array([d[3] for d in language_data], dtype=str)
+        language = np.concatenate(
+            (
+                language_start_ids,
+                language_end_ids,
+                language_task_labels,
+                language_instructions,
+            ),
+            axis=1,
+        )
 
         features = np.array(
             list(self.extract_features(subdirectory, split)), dtype=np.float32
@@ -285,14 +298,15 @@ class CalvinPreprocessor:
 
         features = np.concatenate((features, scene_differences), axis=1)
 
+        frame_ids, features = features[:, 0].astype(int), features[:, 1:]
+
         data = {
             "features": features,
+            "language": language,
+            "frame_ids": frame_ids,
+            "task_names": TASK_LABELS,
+            "field_names": FIELD_NAMES,
             "metadata": metadata,
-            "language": {
-                "start_end_ids": language_start_end_ids,
-                "task_labels": language_task_labels,
-                "instructions": language_instructions,
-            },
         }
 
         return data
