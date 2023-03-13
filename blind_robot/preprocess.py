@@ -12,8 +12,11 @@ from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 
 
+# Porte
 class CalvinPreprocessor:
-    """Preprocessing utility the Calvin dataset."""
+    """Preprocessing utility the Calvin dataset.
+    Reference: github.com/denizyuret/calvin-scripts
+    """
 
     directory: str = "/raid/lingo/data/calvin/"
     episode_regex: Pattern[AnyStr] = re.compile(r"episode_(\d{7})\.npz")
@@ -234,7 +237,7 @@ class CalvinPreprocessor:
         for _, end in episode_start_ends:
             episode_ends.add(end)
 
-        for i in range(data.shape[0]):
+        for i in tqdm(range(data.shape[0])):
             curr_frame = data[i, 0]
             curr_scene = data[i, 30:54]
             if curr_frame in episode_ends:
