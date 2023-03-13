@@ -6,8 +6,6 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from blind_robot.utils.data_utils import int2task as TASK_LABELS
-
 
 class CalvinDataset(Dataset):
     def __init__(self, path, config):
@@ -26,29 +24,29 @@ class CalvinDataset(Dataset):
         # normalize features
         data["features"] = self._normalize(data["features"])
 
-        episode_ids = data["features"][:, 0].astype(int)
+        frame_ids = data["frame_ids"]
 
-        episode_id_to_index = np.full(1 + max(episode_ids), -1)
+        frame_id_to_index = np.full(1 + max(frame_ids), -1)
 
-        episode_id_to_index[episode_ids] = np.arange(len(episode_ids))
+        frame_id_to_index[frame_ids] = np.arange(len(frame_ids))
 
-        return data, episode_id_to_index
+        return data, frame_id_to_index
 
     def _load_language(self, data):
-        vocabulary = {label: index for index, label in enumerate(TASK_LABELS)}
+        vocabulary = {label: index for index, label in enumerate(data["task_names"])}
 
         print(f"vocabulary: {vocabulary}")
 
         language_data = data["language"]
 
-        for label in language_data["task_labels"]:
-            assert label in vocabulary, "task not found"
+        for label in language_data:
+            assert label[2] in vocabulary, "task not found"
 
         return language_data, vocabulary
 
     def _load_data(self, path, window=64, features=range(1, 98)):
         # load data
-        data, episode_id_to_index = self._load_state(path=path)
+        data, frame_id_to_index = self._load_state(path=path)
 
         feature_data = data["features"]
 
@@ -57,14 +55,15 @@ class CalvinDataset(Dataset):
         # TODO(ekin): assert max episode of language_data and feature_data
 
         self.items = []
-        for index in tqdm(range(len(language_data["task_labels"]))):
-            start_episode_id, stop_episode_id = language_data["start_end_ids"][index]
-            task_label = language_data["task_labels"][index]
-            instruction = language_data["instructions"][index]
+        for index in tqdm(range(len(language_data))):
+            start_episode_id = language_data[index][0]
+            stop_episode_id = language_data[index][1]
+            task_label = language_data[index][2]
+            instruction = language_data[index][3]
 
-            start_index = episode_id_to_index[start_episode_id]
+            start_index = frame_id_to_index[start_episode_id]
 
-            stop_index = episode_id_to_index[stop_episode_id]
+            stop_index = frame_id_to_index[stop_episode_id]
 
             start_index = min(stop_index - window + 1, start_index)
 
