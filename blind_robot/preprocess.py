@@ -12,7 +12,6 @@ from sklearn.linear_model import LinearRegression
 from tqdm import tqdm
 
 
-# Porte
 class CalvinPreprocessor:
     """Preprocessing utility the Calvin dataset.
     Reference: github.com/denizyuret/calvin-scripts
