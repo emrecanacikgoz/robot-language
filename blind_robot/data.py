@@ -1,12 +1,10 @@
+import pickle
 import sys
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import numpy as np
-
-from blind_robot.utils.data_utils import dtype_lang
-from blind_robot.utils.data_utils import int2task
 
 
 class CalvinDataset(Dataset):
@@ -19,60 +17,70 @@ class CalvinDataset(Dataset):
     def _load_state(self, path=None):
         print(f"Loading {path}...", file=sys.stderr)
 
-        # load base data (53-dimensional)
-        with open(path + '.tsv', 'rt') as f:
-            data = np.loadtxt(f, delimiter='\t', dtype='float32')
+        # load data
+        with open(path, "rb") as handle:
+            data = pickle.load(handle)
 
-        # load controller data (12-dimensional)
-        with open(path + '-controllers.tsv', 'rt') as f:
-            cont = np.loadtxt(f, delimiter='\t', dtype='float32')
-            assert np.array_equal(data[:,0], cont[:,0]), 'cont indices do not match'
+        # normalize features
+        data["features"] = self._normalize(data["features"])
 
-        # load tactile data (8-dimensional)
-        with open(path + '-tactile2.tsv', 'rt') as f:
-            tact = np.loadtxt(f, delimiter='\t', dtype='float32')
-            assert np.array_equal(data[:,0], tact[:,0]), 'tact indices do not match'
+        frame_ids = data["frame_ids"]
 
-        # create 73-dimensional instances and normalize
-        data = np.concatenate((data, cont[:,1:], tact[:,1:]), axis=1)
-        data = self._normalize(data)
+        frame_id_to_index = np.full(1 + max(frame_ids), -1)
 
-        pos2id = data[:,0].astype(int)
-        id2pos = np.full(1+max(pos2id), -1)
-        for (pos, id) in enumerate(pos2id):
-            id2pos[id] = pos
+        frame_id_to_index[frame_ids] = np.arange(len(frame_ids))
 
-        return data, pos2id, id2pos
+        return data, frame_id_to_index
 
-    def _load_language(self, path=None):
-        print(f"Loading {path}-lang...", file=sys.stderr)
-        with open(path + '-lang.tsv', 'rt') as f:
-            lang = np.loadtxt(f, delimiter='\t', dtype=dtype_lang)
-        lang.sort(order = 'end')
+    def _load_language(self, data):
+        vocabulary = {label: index for index, label in enumerate(data["task_names"])}
 
-        task2int = {ch: i for i, ch in enumerate(int2task)}
-        print(f"task2int: {task2int}")
-        for task in lang['task']:
-            assert task in task2int, 'task not found'
-        return lang, task2int, int2task
+        print(f"vocabulary: {vocabulary}")
 
-    def _load_data(self, path, window=64, features=range(1,74)):
+        language_data = data["language"]
 
-        # get action and language data
-        data, _pos2id, id2pos = self._load_state(path=path)
-        lang, task2int, _int2task = self._load_language(path=path)
+        for label in language_data:
+            assert label[2] in vocabulary, "task not found"
 
-        # create instances
+        return language_data, vocabulary
+
+    def _load_data(self, path, window=64, features=range(1, 98)):
+        # load data
+        data, frame_id_to_index = self._load_state(path=path)
+
+        feature_data = data["features"]
+
+        language_data, vocabulary = self._load_language(data)
+
+        # TODO(ekin): assert max episode of language_data and feature_data
+
         self.items = []
-        for (_, idx, task, _annot) in tqdm(lang):
-            taskID = task2int[task]
-            pos = id2pos[idx]
-            sample = {
-                "source": np.ravel(data[np.ix_(range(pos-window+1, pos+1), features)]),
-                "target": taskID,
-                "idx": idx
-            }
-            self.items.append(sample)
+        for index in tqdm(range(len(language_data))):
+            start_episode_id = language_data[index][0]
+            stop_episode_id = language_data[index][1]
+            task_label = language_data[index][2]
+            instruction = language_data[index][3]
+
+            start_index = frame_id_to_index[start_episode_id]
+
+            stop_index = frame_id_to_index[stop_episode_id]
+
+            start_index = min(stop_index - window + 1, start_index)
+
+            context_idx = range(start_index, stop_index + 1)
+
+            if len(context_idx) == window + 1:
+                current_data = feature_data[np.ix_(context_idx, features)]
+
+                sample = {
+                    "source": np.ravel(current_data),
+                    "target": vocabulary[task_label],
+                    "index": index,
+                    "instruction": instruction,
+                    "start_end_ids": (start_episode_id, stop_episode_id),
+                }
+
+                self.items.append(sample)
 
     def __len__(self):
         return len(self.items)
@@ -80,7 +88,7 @@ class CalvinDataset(Dataset):
     def __getitem__(self, index):
         episode = self.items[index]
 
-        # convert narray2tensor
+        # convert numpy arrays to torch tensors
         source = torch.tensor(episode["source"], dtype=torch.float)
         target = torch.tensor(episode["target"], dtype=torch.long)
 
@@ -113,7 +121,6 @@ class CalvinDatasetGPT(Dataset):
         states = []
         with open(self.data, "r", encoding="utf-8") as f:
             for line in tqdm(f):
-
                 # set data fields
                 l = line.rstrip("\n").split("\t")
                 _, state = l[0], [float(i) for i in l[1:]]
@@ -160,7 +167,3 @@ class CalvinDatasetGPT(Dataset):
 
     def _quantize(self, source):
         raise NotImplementedError
-
-
-
-

@@ -35,8 +35,8 @@ data:
 #  val_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-validation.tsv"
 #  train_data_file_tsv: "/kuacc/users/eacikgoz17/robot-language/data/ABCD-training.tsv"
 
-  train_path: "/Users/emrecanacikgoz/Desktop/rl-project/data/debug-training"
-  val_path: "/Users/emrecanacikgoz/Desktop/rl-project/data/debug-validation"
+  train_path: "data/ABC_training.pkl"
+  val_path: "data/D_validation.pkl"
   keys: [
          "actions",                         # 7-dimensional
          "rel_actions",                     # 7-dimensional
@@ -56,7 +56,7 @@ data:
   shuffle_val: False
 
 model_mlp:
-  input_dim: 4672
+  input_dim: 6305
   hidden_dim: 128
   output_dim: 34
   dropout: 0.1
